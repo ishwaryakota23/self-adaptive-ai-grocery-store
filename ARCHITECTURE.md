@@ -1,87 +1,75 @@
-# Architecture
+# GrocerAI Architecture
 
-## High-Level Architecture
+## 1. System Overview
 
-Customer
-   ↓
-Customer Agent
-   ↓
-Application Services
-   ↓
-Database + Hindsight Memory
-   ↑
-Store Agent
-   ↑
-Store Events / Inventory / Traffic / Queues
+GrocerAI is a self-adaptive AI grocery store built around two coordinated AI agents:
 
-## Frontend
+- **Customer Agent** — understands the needs, mission, preferences, and next-best assistance for an individual customer.
+- **Store Agent** — understands inventory, demand, sales, store activity, stockouts, queues, recommendations, and operational decisions.
 
-- React
-- TypeScript
-- Tailwind CSS
-- Responsive UI
+The two agents operate over shared application state while maintaining separate responsibilities.
 
-## Backend / Data
+The core adaptive loop is:
 
-- Supabase
-- PostgreSQL
-- Authentication
-- Application state
+**OBSERVE → RECALL → REASON → ACT → RE-OBSERVE → LEARN/RETAIN → FUTURE RECALL**
 
-## Long-Term Memory
+GrocerAI separates:
 
-Hindsight is used for persistent agent memory.
+- **Structured application state** — current facts and operational state.
+- **Hindsight memory** — meaningful experiences and outcomes that can influence future reasoning.
 
-Database:
-- Current application state
-- Inventory
-- Orders
-- Missions
-- Events
-- Operational state
+---
 
-Hindsight:
-- Long-term experiences
-- Customer preferences
-- Store experiences
-- Previous actions and outcomes
-- Context used for future reasoning
+## 2. High-Level Architecture
 
-## Agent Services
-
-The implementation should maintain clear service boundaries:
-
-- customerAgent
-- storeAgent
-- memoryService
-- voiceService
-- notificationService
-
-## Customer Flow
-
-Interaction
-→ Understand intent
-→ Create/update mission
-→ Check availability
-→ Recommend
-→ Navigate
-→ Proactively follow up
-→ Complete shopping
-
-## Store Flow
-
-Observe store
-→ Detect signal
-→ Recall relevant experience
-→ Reason
-→ Recommend action
-→ Execute action
-→ Re-observe
-→ Store outcome
-
-## Important Principle
-
-Do not turn the application into a collection of disconnected screens.
-
-Navigation, state changes, agent actions, memory, and database state should
-form one connected system.
+```text
+                         ┌──────────────────────┐
+                         │      Customer        │
+                         │ Shared Store Display │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │   Customer Agent     │
+                         │   Groq + Tools       │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                    ┌──────────────────────────────┐
+                    │     Application Services     │
+                    │                              │
+                    │ Cart • Mission • Inventory   │
+                    │ Orders • Events • Voice      │
+                    │ Notifications • Analytics    │
+                    └──────────────┬───────────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    ▼                             ▼
+       ┌──────────────────────┐      ┌────────────────────────┐
+       │ Structured State     │      │ Hindsight Memory       │
+       │                      │      │                        │
+       │ Current facts        │      │ Customer experiences   │
+       │ Inventory            │      │ Store experiences      │
+       │ Cart / Orders        │      │ Preferences            │
+       │ Missions             │      │ Actions + outcomes     │
+       │ Events              │      │ Previous decisions      │
+       └──────────────────────┘      └────────────────────────┘
+                    ▲                             ▲
+                    │                             │
+                    │                Recall / Retain / Reflect
+                    │                             │
+                    │                             │
+             ┌──────┴─────────────────────────────┴──────┐
+             │              Store Agent                  │
+             │              Groq + Tools                 │
+             └──────────────────┬────────────────────────┘
+                                ▲
+                                │
+                 ┌──────────────┴──────────────┐
+                 │ Store Signals               │
+                 │                             │
+                 │ Inventory • Demand          │
+                 │ Sales • Traffic             │
+                 │ Checkout Queues              │
+                 │ Stockouts • Requests        │
+                 └─────────────────────────────┘
