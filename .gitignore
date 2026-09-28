@@ -1,0 +1,74 @@
+# Environment variables & secrets (CRITICAL: NEVER COMMIT)
+.env
+.env.*
+.env.local
+!.env.example
+*.pem
+*.key
+*.cert
+*.secret
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production build outputs
+dist/
+dist-ssr/
+build/
+out/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Antigravity & Agent internal files
+.gemini/
+.antigravity/
+.system_generated/
+*.metadata.json
+
+# Python & runtime caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+ENV/
+
+# Local database runtime & vector stores
+.pg0/
+.hindsight/
+*.pid
+*.sock
+
+# Temporary & cache directories
+tmp/
+temp/
+.cache/
+.parcel-cache/
+coverage/
+.nyc_output/
+
+# Editor & OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swo
+*.swn
+.DS_Store
+Thumbs.db
+ehthumbs.db
