@@ -276,6 +276,64 @@ function groqApiPlugin(): Plugin {
           return;
         }
 
+        if (req.url === '/api/hindsight/status' && req.method === 'GET') {
+          const healthy = await hindsightService.isHealthy();
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({
+            success: true,
+            isHealthy: healthy,
+            baseUrl: process.env.HINDSIGHT_BASE_URL || 'http://localhost:8888',
+            storeBank: hindsightService.getStoreBank(),
+            activityCount: hindsightService.getActivityLog().length
+          }));
+          return;
+        }
+
+        if (req.url === '/api/hindsight/activity' && req.method === 'GET') {
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({
+            success: true,
+            activities: hindsightService.getActivityLog()
+          }));
+          return;
+        }
+
+        if (req.url === '/api/hindsight/recall' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk: any) => { body += chunk; });
+          req.on('end', async () => {
+            try {
+              const { bankId, query, tags } = JSON.parse(body || '{}');
+              const result = await hindsightService.recall(bankId, query, { tags });
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(result));
+            } catch (err: any) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: false, error: err?.message }));
+            }
+          });
+          return;
+        }
+
+        if (req.url === '/api/hindsight/retain' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk: any) => { body += chunk; });
+          req.on('end', async () => {
+            try {
+              const { bankId, content, options } = JSON.parse(body || '{}');
+              const result = await hindsightService.retain(bankId, content, options);
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(result));
+            } catch (err: any) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: false, error: err?.message }));
+            }
+          });
+          return;
+        }
+
         next();
       });
     }

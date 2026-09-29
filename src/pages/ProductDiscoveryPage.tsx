@@ -125,6 +125,7 @@ export const ProductDiscoveryPage: React.FC = () => {
             return (
               <div
                 key={product.id}
+                data-testid="product-card"
                 className="bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 rounded-2xl overflow-hidden shadow-lg transition-all hover:-translate-y-1 flex flex-col justify-between group"
               >
                 <div

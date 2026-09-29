@@ -81,6 +81,12 @@ export class HindsightService {
    */
   public async isHealthy(): Promise<boolean> {
     try {
+      if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+        const res = await fetch('/api/hindsight/status');
+        if (!res.ok) return false;
+        const data = await res.json();
+        return Boolean(data.isHealthy);
+      }
       const res = await fetch(`${this.baseUrl}/health`, { method: 'GET' });
       return res.ok;
     } catch {
@@ -102,90 +108,95 @@ export class HindsightService {
       context?: string;
     }
   ): Promise<{ success: boolean; bankId: string; itemsCount: number; error?: string }> {
-    const startTime = Date.now();
-    try {
-      const res = await this.client.retain(bankId, content, {
-        tags: options?.tags,
-        metadata: options?.metadata,
-        documentId: options?.documentId,
-        context: options?.context,
-      });
-
-      const count = res.items_count || 1;
-      this.logActivity({
-        id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        timestamp: new Date().toLocaleTimeString(),
-        bankId,
-        operation: 'retain',
-        input: content.length > 80 ? `${content.substring(0, 80)}...` : content,
-        resultSummary: `Retained ${count} item(s) successfully`,
-        itemCount: count,
-        success: true,
-        durationMs: Date.now() - startTime,
-        tags: options?.tags,
-      });
-
-      return {
-        success: true,
-        bankId,
-        itemsCount: count,
-      };
-    } catch (err: any) {
-      if (
-        err?.message?.includes('429') ||
-        err?.message?.includes('Rate limit') ||
-        err?.message?.includes('quota exhausted') ||
-        err?.message?.includes('deferred by provider quota')
-      ) {
-        console.warn(`[HindsightService] Rate limit hit on ${bankId}. Waiting 15s before retry...`);
-        await new Promise(r => setTimeout(r, 15000));
-        try {
-          const retryRes = await this.client.retain(bankId, content, {
-            tags: options?.tags,
-            metadata: options?.metadata,
-            documentId: options?.documentId,
-            context: options?.context,
-          });
-          const count = retryRes.items_count || 1;
-          this.logActivity({
-            id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            timestamp: new Date().toLocaleTimeString(),
-            bankId,
-            operation: 'retain',
-            input: content.length > 80 ? `${content.substring(0, 80)}...` : content,
-            resultSummary: `Retained ${count} item(s) on retry`,
-            itemCount: count,
-            success: true,
-            durationMs: Date.now() - startTime,
-            tags: options?.tags,
-          });
-          return { success: true, bankId, itemsCount: count };
-        } catch (retryErr: any) {
-          console.warn(`[HindsightService] Retry failed on ${bankId}:`, retryErr?.message || retryErr);
-        }
+    if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+      try {
+        const res = await fetch('/api/hindsight/retain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bankId, content, options })
+        });
+        return await res.json();
+      } catch (err: any) {
+        return { success: false, bankId, itemsCount: 0, error: err?.message };
       }
-
-      console.warn(`[HindsightService] Retain failed on ${bankId}:`, err?.message || err);
-      this.logActivity({
-        id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        timestamp: new Date().toLocaleTimeString(),
-        bankId,
-        operation: 'retain',
-        input: content.length > 80 ? `${content.substring(0, 80)}...` : content,
-        resultSummary: `Failed: ${err?.message || 'Connection error'}`,
-        itemCount: 0,
-        success: false,
-        durationMs: Date.now() - startTime,
-        tags: options?.tags,
-      });
-
-      return {
-        success: false,
-        bankId,
-        itemsCount: 0,
-        error: err?.message || 'Retain failed',
-      };
     }
+
+    const startTime = Date.now();
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      attempt++;
+      try {
+        const res = await this.client.retain(bankId, content, {
+          tags: options?.tags,
+          metadata: options?.metadata,
+          documentId: options?.documentId,
+          context: options?.context,
+        });
+
+        const count = res.items_count || 1;
+        this.logActivity({
+          id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          timestamp: new Date().toLocaleTimeString(),
+          bankId,
+          operation: 'retain',
+          input: content.length > 80 ? `${content.substring(0, 80)}...` : content,
+          resultSummary: `Retained ${count} item(s) successfully`,
+          itemCount: count,
+          success: true,
+          durationMs: Date.now() - startTime,
+          tags: options?.tags,
+        });
+
+        return {
+          success: true,
+          bankId,
+          itemsCount: count,
+        };
+      } catch (err: any) {
+        const isRateLimit =
+          err?.message?.includes('429') ||
+          err?.message?.includes('Rate limit') ||
+          err?.message?.includes('quota exhausted') ||
+          err?.message?.includes('deferred by provider quota');
+
+        if (isRateLimit && attempt < maxRetries) {
+          const waitSecs = attempt * 18;
+          console.warn(`[HindsightService] Rate limit hit on ${bankId} (attempt ${attempt}/${maxRetries}). Waiting ${waitSecs}s before retry...`);
+          await new Promise(r => setTimeout(r, waitSecs * 1000));
+          continue;
+        }
+
+        console.warn(`[HindsightService] Retain failed on ${bankId}:`, err?.message || err);
+        this.logActivity({
+          id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          timestamp: new Date().toLocaleTimeString(),
+          bankId,
+          operation: 'retain',
+          input: content.length > 80 ? `${content.substring(0, 80)}...` : content,
+          resultSummary: `Failed: ${err?.message || 'Connection error'}`,
+          itemCount: 0,
+          success: false,
+          durationMs: Date.now() - startTime,
+          tags: options?.tags,
+        });
+
+        return {
+          success: false,
+          bankId,
+          itemsCount: 0,
+          error: err?.message || 'Retain failed',
+        };
+      }
+    }
+
+    return {
+      success: false,
+      bankId,
+      itemsCount: 0,
+      error: 'Max retries exceeded'
+    };
   }
 
   /**
@@ -206,64 +217,103 @@ export class HindsightService {
     rawResponse?: any;
     error?: string;
   }> {
-    const startTime = Date.now();
-    try {
-      const res = await this.client.recall(bankId, query, {
-        tags: options?.tags,
-        maxTokens: options?.maxTokens || 1024,
-      });
-
-      const promptStr = recallResponseToPromptString(res) || '';
-      const items: RecallResultItem[] = (res.results || []).map((r: any) => ({
-        id: r.id,
-        text: r.text,
-        type: r.type,
-        entities: r.entities,
-        tags: r.tags,
-        scores: r.scores,
-      }));
-
-      this.logActivity({
-        id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        timestamp: new Date().toLocaleTimeString(),
-        bankId,
-        operation: 'recall',
-        input: query,
-        resultSummary: `Recalled ${items.length} relevant memory item(s)`,
-        itemCount: items.length,
-        success: true,
-        durationMs: Date.now() - startTime,
-        tags: options?.tags,
-      });
-
-      return {
-        success: true,
-        results: items,
-        promptString: promptStr,
-        rawResponse: res,
-      };
-    } catch (err: any) {
-      console.warn(`[HindsightService] Recall failed on ${bankId}:`, err?.message || err);
-      this.logActivity({
-        id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        timestamp: new Date().toLocaleTimeString(),
-        bankId,
-        operation: 'recall',
-        input: query,
-        resultSummary: `Failed: ${err?.message || 'Connection error'}`,
-        itemCount: 0,
-        success: false,
-        durationMs: Date.now() - startTime,
-        tags: options?.tags,
-      });
-
-      return {
-        success: false,
-        results: [],
-        promptString: '',
-        error: err?.message || 'Recall failed',
-      };
+    if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+      try {
+        const res = await fetch('/api/hindsight/recall', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bankId, query, tags: options?.tags })
+        });
+        return await res.json();
+      } catch (err: any) {
+        return { success: false, results: [], promptString: '', error: err?.message };
+      }
     }
+
+    const startTime = Date.now();
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      attempt++;
+      try {
+        const res = await this.client.recall(bankId, query, {
+          tags: options?.tags,
+          maxTokens: options?.maxTokens || 1024,
+        });
+
+        const promptStr = recallResponseToPromptString(res) || '';
+        const items: RecallResultItem[] = (res.results || []).map((r: any) => ({
+          id: r.id,
+          text: r.text,
+          type: r.type,
+          entities: r.entities,
+          tags: r.tags,
+          scores: r.scores,
+        }));
+
+        this.logActivity({
+          id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          timestamp: new Date().toLocaleTimeString(),
+          bankId,
+          operation: 'recall',
+          input: query,
+          resultSummary: `Recalled ${items.length} relevant memory item(s)`,
+          itemCount: items.length,
+          success: true,
+          durationMs: Date.now() - startTime,
+          tags: options?.tags,
+        });
+
+        return {
+          success: true,
+          results: items,
+          promptString: promptStr,
+          rawResponse: res,
+        };
+      } catch (err: any) {
+        const isRateLimit =
+          err?.message?.includes('429') ||
+          err?.message?.includes('Rate limit') ||
+          err?.message?.includes('quota exhausted') ||
+          err?.message?.includes('deferred by provider quota');
+
+        if (isRateLimit && attempt < maxRetries) {
+          const waitSecs = attempt * 15;
+          console.warn(`[HindsightService] Rate limit hit on recall for ${bankId} (attempt ${attempt}/${maxRetries}). Waiting ${waitSecs}s before retry...`);
+          await new Promise(r => setTimeout(r, waitSecs * 1000));
+          continue;
+        }
+
+        console.warn(`[HindsightService] Recall failed on ${bankId}:`, err?.message || err);
+        this.logActivity({
+          id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          timestamp: new Date().toLocaleTimeString(),
+          bankId,
+          operation: 'recall',
+          input: query,
+          resultSummary: `Failed: ${err?.message || 'Connection error'}`,
+          itemCount: 0,
+          success: false,
+          durationMs: Date.now() - startTime,
+          tags: options?.tags,
+        });
+
+        return {
+          success: false,
+          results: [],
+          promptString: '',
+          error: err?.message || 'Recall failed',
+        };
+      }
+    }
+
+    return {
+      success: false,
+      results: [],
+      promptString: '',
+      error: 'Max retries exceeded',
+    };
   }
 
   /**
