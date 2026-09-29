@@ -57,7 +57,11 @@ export class HindsightService {
 
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl || (typeof process !== 'undefined' && process.env?.HINDSIGHT_BASE_URL) || 'http://localhost:8888';
-    this.client = new HindsightClient({ baseUrl: this.baseUrl });
+    const apiKey = (typeof process !== 'undefined' && process.env?.HINDSIGHT_API_KEY?.trim()) || undefined;
+    this.client = new HindsightClient({
+      baseUrl: this.baseUrl,
+      ...(apiKey ? { apiKey } : {})
+    });
   }
 
   /**
@@ -87,7 +91,20 @@ export class HindsightService {
         const data = await res.json();
         return Boolean(data.isHealthy);
       }
-      const res = await fetch(`${this.baseUrl}/health`, { method: 'GET' });
+      // On Vercel / Cloud serverless, localhost daemon is not available. Fail immediately and honestly.
+      if (typeof process !== 'undefined' && process.env?.VERCEL && this.baseUrl.includes('localhost')) {
+        return false;
+      }
+      const headers: Record<string, string> = {};
+      const apiKey = typeof process !== 'undefined' ? process.env?.HINDSIGHT_API_KEY?.trim() : undefined;
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+      const res = await fetch(`${this.baseUrl}/health`, {
+        method: 'GET',
+        headers,
+        signal: AbortSignal.timeout(3000)
+      });
       return res.ok;
     } catch {
       return false;
