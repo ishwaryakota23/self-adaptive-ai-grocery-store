@@ -1,13 +1,13 @@
 declare const process: any;
 
-import { GROQ_STORE_TOOL_DEFINITIONS, executeStoreAgentTool, StoreToolExecutionResult, storeAgentTools } from '../services/storeAgentTools';
-import { hindsightService } from '../services/hindsightService';
-import { db } from '../services/db';
+import { GROQ_STORE_TOOL_DEFINITIONS, executeStoreAgentTool, StoreToolExecutionResult, storeAgentTools } from '../services/storeAgentTools.js';
+import { hindsightService } from '../services/hindsightService.js';
+import { db } from '../services/db.js';
 import {
   StoreAgentRequest,
   StoreAgentResponse,
   StructuredRecommendation
-} from '../types';
+} from '../types/index.js';
 
 export class GroqStoreAgentServer {
   private getApiKey(): string | undefined {
@@ -15,7 +15,7 @@ export class GroqStoreAgentServer {
   }
 
   private getModel(): string {
-    return process.env.GROQ_MODEL?.trim() || 'llama-3.3-70b-versatile';
+    return process.env.GROQ_MODEL?.trim() || 'qwen/qwen3.8-27b';
   }
 
   public isConfigured(): boolean {
@@ -25,7 +25,8 @@ export class GroqStoreAgentServer {
 
   public async processRequest(req: StoreAgentRequest): Promise<StoreAgentResponse> {
     const managerId = req.managerId || 'EMP-1042';
-    const input = req.input.trim();
+    const rawInput = req.input || (req as any).message || (req as any).query || '';
+    const input = rawInput.trim();
 
     // 1. Fallback if Groq not configured
     if (!this.isConfigured()) {
@@ -52,13 +53,10 @@ export class GroqStoreAgentServer {
     try {
       const hsRecall = await hindsightService.recallStoreMemories(input);
       if (hsRecall.success && hsRecall.results.length > 0) {
-        recalledMemoriesList = hsRecall.results.map(r => r.text);
-        if (hsRecall.promptString) {
-          storeMemorySection = `\nPAST STORE OPERATIONAL EXPERIENCES & LESSONS (Hindsight Store Memory):\n${hsRecall.promptString}\n`;
-        } else {
-          storeMemorySection = `\nPAST STORE OPERATIONAL EXPERIENCES & LESSONS (Hindsight Store Memory):\n` +
-            hsRecall.results.map(r => `- ${r.text}`).join('\n') + '\n';
-        }
+        const topMemories = hsRecall.results.slice(0, 4);
+        recalledMemoriesList = topMemories.map(r => r.text);
+        storeMemorySection = `\nPAST STORE OPERATIONAL EXPERIENCES & LESSONS (Hindsight Store Memory):\n` +
+          topMemories.map(r => `- ${r.text}`).join('\n') + '\n';
       }
     } catch (err: any) {
       console.warn('[StoreAgent] Hindsight store memory recall failed gracefully:', err?.message || err);
@@ -140,8 +138,8 @@ RULES:
 
       // Handle 429 rate limit backoff
       if (firstResponse.status === 429) {
-        console.warn('Groq 429 rate limit hit. Waiting 10s...');
-        await new Promise(r => setTimeout(r, 10000));
+        console.warn('Groq 429 rate limit hit. Waiting 12s for window reset...');
+        await new Promise(r => setTimeout(r, 12000));
         firstResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -174,11 +172,33 @@ RULES:
       const choice = firstData.choices?.[0];
       const assistantMessage = choice?.message;
 
-      // 4. Handle Tool Calling
-      if (assistantMessage?.tool_calls && assistantMessage.tool_calls.length > 0) {
+      // 4. Handle Tool Calling (Native tool_calls or Qwen <tool_call> tag)
+      let toolCalls = assistantMessage?.tool_calls || [];
+      if (toolCalls.length === 0 && assistantMessage?.content && assistantMessage.content.includes('<tool_call>')) {
+        const match = assistantMessage.content.match(/<function=([a-zA-Z0-9_]+)>([\s\S]*?)<\/function>/);
+        if (match) {
+          const fnName = match[1];
+          let args = {};
+          try {
+            args = JSON.parse(match[2].trim() || '{}');
+          } catch (e) {}
+          toolCalls = [{
+            id: 'call_' + Date.now(),
+            type: 'function',
+            function: {
+              name: fnName,
+              arguments: JSON.stringify(args)
+            }
+          }];
+          assistantMessage.tool_calls = toolCalls;
+          assistantMessage.content = null;
+        }
+      }
+
+      if (toolCalls && toolCalls.length > 0) {
         messages.push(assistantMessage);
 
-        for (const toolCall of assistantMessage.tool_calls) {
+        for (const toolCall of toolCalls) {
           const fnName = toolCall.function.name;
           let fnArgs: Record<string, any> = {};
           try {
@@ -250,7 +270,28 @@ RULES:
         let finalReply = "I have analyzed store telemetry and executed the requested operational actions.";
         if (secondResponse.ok) {
           const secondData = await secondResponse.json();
-          finalReply = secondData.choices?.[0]?.message?.content || finalReply;
+          let content = secondData.choices?.[0]?.message?.content || finalReply;
+          if (content.includes('<tool_call>')) {
+            const match = content.match(/<function=([a-zA-Z0-9_]+)>([\s\S]*?)<\/function>/);
+            if (match) {
+              const fnName = match[1];
+              let args: any = {};
+              try { args = JSON.parse(match[2].trim() || '{}'); } catch(e) {}
+              const secondExec = await executeStoreAgentTool(fnName, args, { employeeId: managerId, name: 'Store Manager' });
+              toolExecutions.push(secondExec);
+              if (fnName === 'generateRestockRecommendation' && secondExec.result?.recommendationId) {
+                generatedRecommendations.push(secondExec.result);
+              } else if (fnName === 'generateStoreRecommendations' && Array.isArray(secondExec.result)) {
+                generatedRecommendations.push(...secondExec.result);
+              }
+            }
+            content = content.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '').trim();
+            if (!content) {
+              const toolNames = toolExecutions.map(t => t.tool_name).join(', ');
+              content = `Based on live store telemetry and past operational lessons, I analyzed inventory deficits and executed: ${toolNames}. Restocking recommendations have been generated based on current demand patterns and past stockout velocity.`;
+            }
+          }
+          finalReply = content;
         }
 
         return {

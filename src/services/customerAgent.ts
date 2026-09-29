@@ -1,7 +1,7 @@
-import { db } from './db';
-import { eventService } from './eventService';
-import { languageDetector, LanguageDetectionResult } from './languageDetector';
-import { Product, LanguageCode, ShoppingMission } from '../types';
+import { db } from './db.js';
+import { eventService } from './eventService.js';
+import { languageDetector, LanguageDetectionResult } from './languageDetector.js';
+import { Product, LanguageCode, ShoppingMission } from '../types/index.js';
 
 export interface CustomerAgentResponse {
   message: string;
@@ -110,16 +110,17 @@ export class CustomerAgent {
           agentResult = await response.json();
         } else {
           const errData = await response.json().catch(() => ({}));
+          const isApiKeyMissing = errData.error === 'GROQ_API_KEY_NOT_CONFIGURED';
           agentResult = {
             success: false,
-            groqConfigured: errData.groqConfigured ?? false,
-            message: errData.message || "Groq AI service is currently unavailable.",
+            groqConfigured: isApiKeyMissing ? false : (errData.groqConfigured ?? true),
+            message: errData.message || (response.status === 500 ? "Server error processing request" : "Groq AI service is currently unavailable."),
             error: errData.error || `HTTP_${response.status}`
           };
         }
       } else {
         // If running server-side / in Node test environment, invoke GroqCustomerAgentServer directly
-        const { groqCustomerAgentServer } = await import('../server/groqCustomerAgent');
+        const { groqCustomerAgentServer } = await import('../server/groqCustomerAgent.js');
         agentResult = await groqCustomerAgentServer.processRequest({
           sessionId: activeCustomerId,
           customerId: activeCustomerId,
@@ -133,14 +134,14 @@ export class CustomerAgent {
       console.warn('Backend Groq agent call failed:', err);
       agentResult = {
         success: false,
-        groqConfigured: false,
-        message: "Groq AI service is currently unreachable. Please ensure the backend server is running and GROQ_API_KEY is configured in your .env file.",
+        groqConfigured: true,
+        message: "Failed to connect to backend AI service. Please check network connectivity or server logs.",
         error: err?.message || 'Network error'
       };
     }
 
     // 5. Handle Groq Not Configured (Section 3, 21, 23)
-    if (!agentResult?.groqConfigured) {
+    if (!agentResult?.groqConfigured || agentResult?.error === 'GROQ_API_KEY_NOT_CONFIGURED') {
       const unconfiguredReply = langResult.response_language === 'hi'
         ? "Groq AI सेवा वर्तमान में अनुपलब्ध है क्योंकि बैकएंड पर्यावरण में GROQ_API_KEY कॉन्फ़िगर नहीं है। कृपया बहुभाषी AI सहायता को सक्षम करने के लिए .env फ़ाइल में GROQ_API_KEY जोड़ें।"
         : langResult.response_language === 'te'
@@ -160,6 +161,23 @@ export class CustomerAgent {
           { label: 'Open Store Map', action: 'map', route: '/customer/map' }
         ],
         error: "GROQ_API_KEY_NOT_CONFIGURED"
+      };
+    }
+
+    // 5b. Handle Server / Runtime Error (Not misreported as API key error)
+    if (!agentResult?.success && agentResult?.error && agentResult.error !== 'GROQ_API_KEY_NOT_CONFIGURED') {
+      return {
+        message: agentResult.message || `An error occurred while contacting the Groq AI service (${agentResult.error}). Please verify server runtime logs.`,
+        groqConfigured: true,
+        detected_language: langResult.detected_language,
+        response_language: langResult.response_language,
+        is_code_mixed: langResult.is_code_mixed,
+        intent: 'AI_ERROR',
+        quickActions: [
+          { label: 'Open Store Map', action: 'map', route: '/customer/map' },
+          { label: 'View Active Mission', action: 'mission', route: '/customer/mission' }
+        ],
+        error: agentResult.error
       };
     }
 

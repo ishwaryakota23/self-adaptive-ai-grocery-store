@@ -1,4 +1,4 @@
-import { CustomerSession } from '../types';
+import { CustomerSession } from '../types/index.js';
 
 const WINDOW_SESSION_KEY = 'grocer_window_session_id';
 const GLOBAL_COUNTER_KEY = 'grocer_session_counter';

@@ -1,5 +1,5 @@
-import { hindsightService } from '../../src/services/hindsightService';
-import { getRequestBody, handleCors, sendJson } from '../_utils';
+import { hindsightService } from '../../src/services/hindsightService.js';
+import { getRequestBody, handleCors, sendJson } from '../_utils.js';
 
 export default async function handler(req: any, res: any) {
   if (handleCors(req, res)) return;

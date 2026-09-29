@@ -1,4 +1,4 @@
-import { LanguageCode } from '../types';
+import { LanguageCode } from '../types/index.js';
 
 export type DetectedLanguageType = 'en' | 'te' | 'hi' | 'te-en' | 'hi-en';
 

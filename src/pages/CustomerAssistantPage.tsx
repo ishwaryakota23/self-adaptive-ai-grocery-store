@@ -22,7 +22,17 @@ import { AgentAvatar } from '../components/AgentAvatar';
 import { customerAgent, CustomerAgentResponse } from '../services/customerAgent';
 import { voiceService } from '../services/voiceService';
 import { db } from '../services/db';
-import { SubstitutionRecord } from '../types';
+import { SubstitutionRecord } from '../types/index.js';
+
+interface ProactiveItemContext {
+  id: string;
+  name: string;
+  shortName: string;
+  aisle: string;
+  shelfLocation?: string;
+  missionItemId?: string;
+  reason?: string;
+}
 
 export const CustomerAssistantPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -48,7 +58,8 @@ export const CustomerAssistantPage: React.FC = () => {
     { sender: 'user' | 'agent'; text: string; data?: CustomerAgentResponse }[]
   >([]);
 
-  // Proactive check state
+  // Proactive check state (dynamic, session & context-aware)
+  const [proactiveItem, setProactiveItem] = useState<ProactiveItemContext | null>(null);
   const [showProactiveFoundCheck, setShowProactiveFoundCheck] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -81,55 +92,96 @@ export const CustomerAssistantPage: React.FC = () => {
     return unsubVoice;
   }, []);
 
-  // Initialize with the standard Pasta Night intent matching Screen 4
+  // Initialize with session-aware context (Pasta Night for USER00001 demo, clean personalized greeting for new sessions)
   useEffect(() => {
-    const initResponse: CustomerAgentResponse = {
-      message:
-        language === 'hi'
-          ? 'नमस्ते! मैं समझ गया कि आप 4 लोगों के लिए पास्ता सामग्री खरीदना चाहते हैं। क्या आपको सॉस या पनीर भी चाहिए?'
-          : language === 'te'
-          ? 'నమస్కారం! మీరు 4 వ్యక్తుల కోసం పాస్తా పదార్థాలు కొనాలనుకుంటున్నారని నేను అర్థం చేసుకున్నాను. మీకు సాస్ లేదా చీజ్ కూడా కావాలా?'
-          : 'I understood you want to buy ingredients for pasta for 4 people. Do you also need any sauces or cheese?',
-      intent: 'Dinner for 4 (Pasta Night)',
-      itemsDetected: ['Pasta', 'Tomatoes', 'Onions', 'Cheese'],
-      followUpSuggestions: [
+    const isPastaDemoSession = currentUser.id === 'USER00001' && activeMission?.id === 'mission-pasta-night';
+
+    if (isPastaDemoSession) {
+      const initResponse: CustomerAgentResponse = {
+        message:
+          language === 'hi'
+            ? 'नमस्ते! मैं समझ गया कि आप 4 लोगों के लिए पास्ता सामग्री खरीदना चाहते हैं। क्या आपको सॉस या पनीर भी चाहिए?'
+            : language === 'te'
+            ? 'నమస్కారం! మీరు 4 వ్యక్తుల కోసం పాస్తా పదార్థాలు కొనాలనుకుంటున్నారని నేను అర్థం చేసుకున్నాను. మీకు సాస్ లేదా చీజ్ కూడా కావాలా?'
+            : 'I understood you want to buy ingredients for pasta for 4 people. Do you also need any sauces or cheese?',
+        intent: 'Dinner for 4 (Pasta Night)',
+        itemsDetected: ['Pasta', 'Tomatoes', 'Onions', 'Cheese'],
+        followUpSuggestions: [
+          {
+            id: 'wheat_pref',
+            question: 'Do you prefer whole wheat or regular pasta?',
+            options: ['Whole Wheat (Borges)', 'Regular Durum', 'Gluten-Free']
+          },
+          {
+            id: 'recipe_pref',
+            question: 'Would you like me to suggest a pasta recipe?',
+            options: ['Creamy Tomato Penne', 'Classic Aglio e Olio', 'Basilico Pesto']
+          },
+          {
+            id: 'brand_pref',
+            question: 'Do you want any special brand?',
+            options: ['Borges Semolina', 'Barilla', 'Organic Choice']
+          }
+        ],
+        quickActions: [
+          { label: 'View Pasta Night Mission', action: 'view_mission', route: '/customer/mission' },
+          { label: 'Navigate to Aisle 3 (Pasta)', action: 'navigate_aisle', route: '/customer/map?product=prod-pasta' }
+        ]
+      };
+
+      setConversation([
         {
-          id: 'wheat_pref',
-          question: 'Do you prefer whole wheat or regular pasta?',
-          options: ['Whole Wheat (Borges)', 'Regular Durum', 'Gluten-Free']
-        },
-        {
-          id: 'recipe_pref',
-          question: 'Would you like me to suggest a pasta recipe?',
-          options: ['Creamy Tomato Penne', 'Classic Aglio e Olio', 'Basilico Pesto']
-        },
-        {
-          id: 'brand_pref',
-          question: 'Do you want any special brand?',
-          options: ['Borges Semolina', 'Barilla', 'Organic Choice']
+          sender: 'agent',
+          text: initResponse.message,
+          data: initResponse
         }
-      ],
-      quickActions: [
-        { label: 'View Pasta Night Mission', action: 'view_mission', route: '/customer/mission' },
-        { label: 'Navigate to Aisle 3 (Pasta)', action: 'navigate_aisle', route: '/customer/map?product=prod-pasta' }
-      ]
-    };
+      ]);
 
-    setConversation([
-      {
-        sender: 'agent',
-        text: initResponse.message,
-        data: initResponse
+      // If active mission has an in-progress mission item, set proactive item dynamically for THAT item
+      const inProgressItem = activeMission?.items?.find(i => i.status === 'in_progress');
+      if (inProgressItem) {
+        setProactiveItem({
+          id: inProgressItem.product_id,
+          name: inProgressItem.product_name,
+          shortName: inProgressItem.product_name.split(' ')[0] || inProgressItem.product_name,
+          aisle: inProgressItem.aisle,
+          shelfLocation: inProgressItem.shelf_location,
+          missionItemId: inProgressItem.id,
+          reason: 'Active mission item'
+        });
+        const timer = setTimeout(() => {
+          setShowProactiveFoundCheck(true);
+        }, 3500);
+        return () => clearTimeout(timer);
+      } else {
+        setProactiveItem(null);
+        setShowProactiveFoundCheck(false);
       }
-    ]);
+    } else {
+      // Dynamic, clean initial state for any new or non-demo customer session
+      const greeting = customerAgent.getProactiveGreeting(currentUser.name, language);
+      const initResponse: CustomerAgentResponse = {
+        message: greeting,
+        intent: 'Shopping Assistance',
+        quickActions: [
+          { label: 'Browse Products', action: 'products', route: '/customer/products' },
+          { label: 'Open Store Map', action: 'map', route: '/customer/map' }
+        ]
+      };
 
-    // Trigger proactive check after 3 seconds to demonstrate Screen 9 / Section 7 requirement
-    const timer = setTimeout(() => {
-      setShowProactiveFoundCheck(true);
-    }, 3500);
+      setConversation([
+        {
+          sender: 'agent',
+          text: greeting,
+          data: initResponse
+        }
+      ]);
 
-    return () => clearTimeout(timer);
-  }, [language]);
+      // Completely fresh customer has NO proactive item and NO proactive card!
+      setProactiveItem(null);
+      setShowProactiveFoundCheck(false);
+    }
+  }, [language, currentUser.id, activeMission?.id]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -175,6 +227,25 @@ export const CustomerAssistantPage: React.FC = () => {
       voiceService.speak(res.message, language, currentUser.id).then(() => {
         setIsSpeaking(false);
       });
+
+      // Update proactive item dynamically based on product found in agent response
+      if (res.productFound) {
+        const prod = res.productFound;
+        const matchingMissionItem = activeMission?.items?.find(i => i.product_id === prod.id);
+        const aisle = res.aisle || prod.aisle || 'Aisle 1';
+        const shelfLocation = prod.shelf_location || (prod.category_name ? `${prod.category_name} Section, ${aisle}` : aisle);
+
+        setProactiveItem({
+          id: prod.id,
+          name: prod.name,
+          shortName: prod.name.split(' ')[0] || prod.name,
+          aisle: aisle,
+          shelfLocation: shelfLocation,
+          missionItemId: matchingMissionItem?.id,
+          reason: `Based on your request for ${prod.name}`
+        });
+        setShowProactiveFoundCheck(true);
+      }
 
       setConversation(prev => [...prev, { sender: 'agent', text: res.message, data: res }]);
     } catch (err) {
@@ -260,10 +331,13 @@ export const CustomerAssistantPage: React.FC = () => {
       // If physical microphone isn't granted or supported in browser, simulate realistic speech after 3 seconds
       if (!started) {
         setTimeout(() => {
-          setTranscript("I need paneer and pasta");
+          const fallbackText = activeMission?.items?.find(i => i.status !== 'found')?.product_name
+            ? `Where can I find ${activeMission.items.find(i => i.status !== 'found')?.product_name}?`
+            : "Where can I find fresh groceries?";
+          setTranscript(fallbackText);
           setTimeout(() => {
             setIsListening(false);
-            handleSend("I need paneer and pasta");
+            handleSend(fallbackText);
           }, 1500);
         }, 1200);
       }
@@ -277,17 +351,22 @@ export const CustomerAssistantPage: React.FC = () => {
     });
   };
 
-  const handleMarkPaneerFound = () => {
-    if (activeMission) {
-      updateMissionItemStatus(activeMission.id, 'm-item-4', 'found');
+  const handleMarkItemFound = () => {
+    if (!proactiveItem) return;
+    if (activeMission && proactiveItem.missionItemId) {
+      updateMissionItemStatus(activeMission.id, proactiveItem.missionItemId, 'found');
     }
+    const itemName = proactiveItem.name;
     setShowProactiveFoundCheck(false);
-    handleSend('I found the item! What is next on my mission?');
+    handleSend(`I found the ${itemName}! What is next on my mission?`);
   };
 
-  const handlePaneerNotFound = async () => {
+  const handleItemNotFound = async () => {
+    if (!proactiveItem) return;
+    const itemName = proactiveItem.name;
+    const itemAisle = proactiveItem.aisle;
     setShowProactiveFoundCheck(false);
-    handleSend("I couldn't find the paneer in Aisle 4.");
+    handleSend(`I couldn't find the ${itemName} in ${itemAisle}.`);
   };
 
   return (
@@ -487,13 +566,13 @@ export const CustomerAssistantPage: React.FC = () => {
                 <span>Groq LLM Reasoning Engine Notice</span>
               </div>
               <p className="text-slate-300 leading-relaxed">
-                <code className="text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded font-mono text-[11px]">GROQ_API_KEY</code> is not configured in the backend environment. Groq with <code className="text-emerald-300 bg-slate-900 px-1.5 py-0.5 rounded font-mono text-[11px]">{groqStatus.model || 'llama-3.3-70b-versatile'}</code> is the designated reasoning engine for GrocerAI. To enable live multimodal reasoning, add <code className="text-amber-300 font-mono text-[11px]">GROQ_API_KEY=your_key_here</code> to your <code className="font-mono text-[11px]">.env</code> file in the project root. GrocerAI will not fake AI responses.
+                <code className="text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded font-mono text-[11px]">GROQ_API_KEY</code> is not configured in the backend environment. Groq with <code className="text-emerald-300 bg-slate-900 px-1.5 py-0.5 rounded font-mono text-[11px]">{groqStatus.model || 'qwen/qwen3.8-27b'}</code> is the designated reasoning engine for GrocerAI. To enable live multimodal reasoning, add <code className="text-amber-300 font-mono text-[11px]">GROQ_API_KEY=your_key_here</code> to your <code className="font-mono text-[11px]">.env</code> file in the project root. GrocerAI will not fake AI responses.
               </p>
             </div>
           )}
 
-          {/* Proactive Notification Banner (Requirement 7 & Screen 9 proactive check) */}
-          {showProactiveFoundCheck && (
+          {/* Proactive Notification Banner (Dynamic, session & context-aware) */}
+          {showProactiveFoundCheck && proactiveItem && (
             <div className="bg-gradient-to-r from-emerald-950/70 via-slate-900 to-emerald-950/70 border border-emerald-500/40 rounded-2xl p-4 shadow-xl animate-fade-in">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -505,16 +584,16 @@ export const CustomerAssistantPage: React.FC = () => {
                       Proactive In-Store Assistant
                     </span>
                     <h4 className="text-sm font-bold text-white">
-                      Did you find the paneer?
+                      Did you find the {proactiveItem.name}?
                     </h4>
                     <p className="text-xs text-slate-300">
-                      It's available in Dairy Section, Aisle 4 (Shelf B2).
+                      It's available in {proactiveItem.shelfLocation || proactiveItem.aisle}.
                     </p>
                   </div>
                 </div>
 
                 <button
-                  onClick={() => handlePlayVoice("Did you find the paneer? It's available in Dairy, Aisle 4.")}
+                  onClick={() => handlePlayVoice(`Did you find the ${proactiveItem.name}? It's available in ${proactiveItem.aisle}.`)}
                   className="p-2 text-slate-400 hover:text-emerald-400 bg-slate-800/80 rounded-xl"
                   title="Play Voice"
                 >
@@ -525,7 +604,7 @@ export const CustomerAssistantPage: React.FC = () => {
               {/* Action Buttons (Requirement 7: Play Voice, View Location, Mark Found, Not Found) */}
               <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-800/80">
                 <button
-                  onClick={() => handlePlayVoice("Did you find the paneer? It's available in Dairy, Aisle 4.")}
+                  onClick={() => handlePlayVoice(`Did you find the ${proactiveItem.name}? It's available in ${proactiveItem.aisle}.`)}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 transition-colors"
                 >
                   <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -533,7 +612,7 @@ export const CustomerAssistantPage: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => navigate('/customer/map?product=prod-paneer')}
+                  onClick={() => navigate(`/customer/map?product=${proactiveItem.id}`)}
                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 transition-colors"
                 >
                   <MapPin className="w-3.5 h-3.5" />
@@ -541,7 +620,7 @@ export const CustomerAssistantPage: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={handleMarkPaneerFound}
+                  onClick={handleMarkItemFound}
                   className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors"
                 >
                   <CheckCircle className="w-3.5 h-3.5" />
@@ -549,7 +628,7 @@ export const CustomerAssistantPage: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={handlePaneerNotFound}
+                  onClick={handleItemNotFound}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-xs font-medium text-slate-300 rounded-lg transition-colors"
                 >
                   <span>Not Found</span>

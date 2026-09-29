@@ -1,4 +1,4 @@
-import { ManagerAccount } from '../types';
+import { ManagerAccount } from '../types/index.js';
 
 const MANAGER_AUTH_KEY = 'grocer_manager_auth';
 

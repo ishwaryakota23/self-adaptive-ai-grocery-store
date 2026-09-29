@@ -25,7 +25,7 @@ import {
   StoreMemoryInsight,
   Order,
   PaymentRecord,
-} from '../types';
+} from '../types/index.js';
 
 const STORAGE_KEY = 'grocer_ai_db_v2';
 
@@ -443,16 +443,16 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     id: 'notif-1',
     customer_id: 'USER00001',
     type: 'product_found',
-    title: 'Did you find the paneer?',
+    title: 'Did you find the cheese?',
     message: "It's available in Dairy Section, Aisle 4.",
-    product_id: 'prod-paneer',
-    product_name: 'Amul Fresh Paneer 200g',
+    product_id: 'prod-cheese',
+    product_name: 'Amul Cheese Block',
     aisle: 'Aisle 4',
     read: false,
     created_at: '2 minutes ago',
     actions: [
       { type: 'play_voice', label: 'Play' },
-      { type: 'view_location', label: 'View Location', route: '/customer/map?product=prod-paneer' },
+      { type: 'view_location', label: 'View Location', route: '/customer/map?product=prod-cheese' },
       { type: 'mark_found', label: 'Mark Found' }
     ]
   },

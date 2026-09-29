@@ -1,5 +1,5 @@
-import { db } from './db';
-import { InventoryItem, InventoryMovement } from '../types';
+import { db } from './db.js';
+import { InventoryItem, InventoryMovement } from '../types/index.js';
 
 class InventoryService {
   public getInventory(): InventoryItem[] {

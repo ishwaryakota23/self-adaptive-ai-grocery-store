@@ -1,5 +1,5 @@
-import { groqStoreAgentServer } from '../../src/server/groqStoreAgent';
-import { getRequestBody, handleCors, sendJson } from '../_utils';
+import { groqStoreAgentServer } from '../../src/server/groqStoreAgent.js';
+import { getRequestBody, handleCors, sendJson } from '../_utils.js';
 
 export default async function handler(req: any, res: any) {
   if (handleCors(req, res)) return;

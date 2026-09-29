@@ -1,5 +1,5 @@
-import { db } from './db';
-import { NotificationItem } from '../types';
+import { db } from './db.js';
+import { NotificationItem } from '../types/index.js';
 
 class NotificationService {
   public getNotifications(sessionId: string): NotificationItem[] {

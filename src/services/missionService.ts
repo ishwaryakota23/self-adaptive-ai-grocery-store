@@ -1,5 +1,5 @@
-import { db } from './db';
-import { ShoppingMission, ShoppingMissionItem } from '../types';
+import { db } from './db.js';
+import { ShoppingMission, ShoppingMissionItem } from '../types/index.js';
 
 class MissionService {
   public getActiveMission(sessionId: string): ShoppingMission | undefined {

@@ -1,12 +1,12 @@
-import { db } from './db';
-import { eventService } from './eventService';
-import { storeAgentTools } from './storeAgentTools';
+import { db } from './db.js';
+import { eventService } from './eventService.js';
+import { storeAgentTools } from './storeAgentTools.js';
 import {
   AIRecommendation,
   CheckoutQueue,
   StoreOverview,
   StructuredRecommendation
-} from '../types';
+} from '../types/index.js';
 
 export class StoreAgent {
   /**

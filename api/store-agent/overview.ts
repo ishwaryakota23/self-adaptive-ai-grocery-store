@@ -1,5 +1,5 @@
-import { storeAgentTools } from '../../src/services/storeAgentTools';
-import { handleCors, sendJson } from '../_utils';
+import { storeAgentTools } from '../../src/services/storeAgentTools.js';
+import { handleCors, sendJson } from '../_utils.js';
 
 export default async function handler(req: any, res: any) {
   if (handleCors(req, res)) return;

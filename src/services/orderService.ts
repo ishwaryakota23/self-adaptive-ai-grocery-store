@@ -1,5 +1,5 @@
-import { db } from './db';
-import { Order } from '../types';
+import { db } from './db.js';
+import { Order } from '../types/index.js';
 
 class OrderService {
   public completeCheckout(paymentMethod: 'UPI' | 'Card' | 'Wallet' | 'Cash', sessionId: string): Order {

@@ -1,5 +1,5 @@
-import { db } from './db';
-import { PaymentRecord, PaymentStatus } from '../types';
+import { db } from './db.js';
+import { PaymentRecord, PaymentStatus } from '../types/index.js';
 
 class PaymentService {
   public getPayments(sessionId?: string): PaymentRecord[] {

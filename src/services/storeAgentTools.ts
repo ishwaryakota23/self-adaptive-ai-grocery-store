@@ -1,6 +1,6 @@
-import { db } from './db';
-import { eventService } from './eventService';
-import { hindsightService } from './hindsightService';
+import { db } from './db.js';
+import { eventService } from './eventService.js';
+import { hindsightService } from './hindsightService.js';
 import {
   Product,
   InventoryItem,
@@ -16,7 +16,7 @@ import {
   DemandFunnelSummary,
   StoreOverview,
   StructuredRecommendation
-} from '../types';
+} from '../types/index.js';
 
 export interface StoreToolExecutionResult {
   tool_name: string;

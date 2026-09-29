@@ -1,8 +1,8 @@
-import { db } from './db';
-import { cartService } from './cartService';
-import { missionService } from './missionService';
-import { eventService } from './eventService';
-import { Product, CartItem, ShoppingMission, InventoryItem, SubstitutionRecord } from '../types';
+import { db } from './db.js';
+import { cartService } from './cartService.js';
+import { missionService } from './missionService.js';
+import { eventService } from './eventService.js';
+import { Product, CartItem, ShoppingMission, InventoryItem, SubstitutionRecord } from '../types/index.js';
 
 export interface ToolExecutionResult {
   tool_name: string;

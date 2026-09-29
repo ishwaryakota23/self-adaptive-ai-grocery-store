@@ -1,5 +1,5 @@
-import { HistoricalEvent, EventType, DemandFunnelSummary } from '../types';
-import { db } from './db';
+import { HistoricalEvent, EventType, DemandFunnelSummary } from '../types/index.js';
+import { db } from './db.js';
 
 class EventService {
   public recordEvent(event: {

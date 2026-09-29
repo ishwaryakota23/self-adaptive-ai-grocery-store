@@ -1,6 +1,6 @@
-import { CustomerMemoryInsight, StoreMemoryInsight } from '../types';
-import { db } from './db';
-import { hindsightService } from './hindsightService';
+import { CustomerMemoryInsight, StoreMemoryInsight } from '../types/index.js';
+import { db } from './db.js';
+import { hindsightService } from './hindsightService.js';
 
 /**
  * Hindsight Memory Layer Interface

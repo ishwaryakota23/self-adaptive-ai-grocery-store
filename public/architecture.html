@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GrocerAI - System Architecture</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #020617;
+      color: #f8fafc;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .glow-emerald { box-shadow: 0 0 35px -5px rgba(16, 185, 129, 0.25); }
+    .glow-blue { box-shadow: 0 0 35px -5px rgba(59, 130, 246, 0.25); }
+    .glow-purple { box-shadow: 0 0 35px -5px rgba(168, 85, 247, 0.25); }
+    .glow-amber { box-shadow: 0 0 35px -5px rgba(245, 158, 11, 0.25); }
+  </style>
+</head>
+<body class="p-8 min-h-screen flex flex-col justify-center items-center">
+  <div class="max-w-6xl w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-slate-800/80 pb-6 mb-8">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <svg class="w-7 h-7 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+            GrocerAI System Architecture
+            <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 mono">v2.0 Production</span>
+          </h1>
+          <p class="text-sm text-slate-400">Continuous Closed-Loop Autonomous Retail Intelligence & Hindsight Memory</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 mono text-xs text-slate-400 bg-slate-950/60 px-4 py-2 rounded-xl border border-slate-800">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        GROQ LLaMA/QWEN + HINDSIGHT ENGINE
+      </div>
+    </div>
+
+    <!-- Core Grid -->
+    <div class="grid grid-cols-12 gap-6 relative">
+
+      <!-- Column 1: Customer In-Store Experience (3 cols) -->
+      <div class="col-span-3 flex flex-col gap-4">
+        <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400 mono flex items-center gap-2">
+          <span>01</span> Customer Touchpoints
+        </div>
+
+        <div class="bg-slate-950/80 border border-emerald-500/30 rounded-2xl p-5 glow-emerald flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-100 text-sm">Interactive Shared Kiosk</span>
+            <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">Store Display</span>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">Touchscreen station in supermarket aisles with real-time map, voice recognition, and dynamic cart.</p>
+          <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 flex flex-col gap-1.5 mono text-[11px] text-slate-300">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">Languages:</span>
+              <span class="text-emerald-400">EN • TE • HI • Mixed</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">Input Mode:</span>
+              <span class="text-teal-300">Voice STT / Touch / Text</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-100 text-sm">Mobile In-Aisle Companion</span>
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">PWA / Sync</span>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">Shopper smartphone synchronizes via QR code or customer ID for hands-free shopping missions.</p>
+          <div class="flex items-center gap-2 text-[11px] text-slate-400 mono">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Session-Isolated State
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: Dual Autonomous Agents (4 cols) -->
+      <div class="col-span-4 flex flex-col gap-4">
+        <div class="text-xs font-semibold uppercase tracking-wider text-blue-400 mono flex items-center gap-2">
+          <span>02</span> Dual Agent Reasoning Layer
+        </div>
+
+        <!-- Customer Agent -->
+        <div class="bg-slate-950/90 border border-blue-500/40 rounded-2xl p-5 glow-blue flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-blue-300 text-sm flex items-center gap-2">
+              <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+              Customer Agent
+            </span>
+            <span class="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded mono">Groq LLM</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Per-shopper cognitive assistant. Dispatches 20 typed backend tools: location lookup, inventory check, dynamic substitutions, allergy checks.
+          </p>
+          <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 text-[11px] text-slate-300 flex flex-wrap gap-1.5">
+            <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800/50">Aisle Router</span>
+            <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800/50">Dietary Filter</span>
+            <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800/50">Substitutions</span>
+            <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800/50">Cart & Mission</span>
+          </div>
+        </div>
+
+        <!-- Store Agent -->
+        <div class="bg-slate-950/90 border border-purple-500/40 rounded-2xl p-5 glow-purple flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-purple-300 text-sm flex items-center gap-2">
+              <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+              Store Agent
+            </span>
+            <span class="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded mono">Restock Intelligence</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Store-wide operational brain for Indiranagar Flagship. Dispatches 14 store tools: stockout velocity, queue balancing, adaptive replenishment.
+          </p>
+          <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 text-[11px] text-slate-300 flex flex-wrap gap-1.5">
+            <span class="px-2 py-0.5 rounded bg-purple-950 text-purple-400 border border-purple-800/50">Demand Funnel</span>
+            <span class="px-2 py-0.5 rounded bg-purple-950 text-purple-400 border border-purple-800/50">Stockout Predictor</span>
+            <span class="px-2 py-0.5 rounded bg-purple-950 text-purple-400 border border-purple-800/50">Restock Engine</span>
+            <span class="px-2 py-0.5 rounded bg-purple-950 text-purple-400 border border-purple-800/50">Queue Monitor</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Hindsight Memory & State (5 cols) -->
+      <div class="col-span-5 flex flex-col gap-4">
+        <div class="text-xs font-semibold uppercase tracking-wider text-amber-400 mono flex items-center gap-2">
+          <span>03</span> Persistence & Hindsight Memory
+        </div>
+
+        <!-- Hindsight Layer -->
+        <div class="bg-slate-950/90 border border-amber-500/40 rounded-2xl p-5 glow-amber flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-300 text-sm flex items-center gap-2">
+              <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Hindsight Persistent Memory
+            </span>
+            <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded mono">Vectorize-IO Engine</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Autonomous experiential learning engine. Captures observations, retains customer preferences cross-lingually, and tracks operational action outcomes.
+          </p>
+          <div class="grid grid-cols-2 gap-3 mt-1">
+            <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+              <div class="text-[11px] font-bold text-amber-400 mono mb-1">Customer Memory Bank</div>
+              <p class="text-[11px] text-slate-400">Stores dietary habits, favorite brands, past substitutions, multilingual queries across visits.</p>
+            </div>
+            <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+              <div class="text-[11px] font-bold text-amber-400 mono mb-1">Store Memory Bank</div>
+              <p class="text-[11px] text-slate-400">Learns surge patterns (e.g. 30 → 50 unit restock rule), rush hour queue congestion, supplier delays.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Structured DB & Event Stream -->
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-200 text-sm">Authoritative State & Event Ledger</span>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded mono">Append-Only Stream</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 mono text-[11px] text-slate-300">
+            <div class="bg-slate-900 p-2 rounded-lg border border-slate-800/80 text-center">
+              <div class="text-slate-400 text-[10px]">INVENTORY</div>
+              <div class="font-bold text-emerald-400">Physical Shelf</div>
+            </div>
+            <div class="bg-slate-900 p-2 rounded-lg border border-slate-800/80 text-center">
+              <div class="text-slate-400 text-[10px]">DEMAND FUNNEL</div>
+              <div class="font-bold text-blue-400">Search → Sale</div>
+            </div>
+            <div class="bg-slate-900 p-2 rounded-lg border border-slate-800/80 text-center">
+              <div class="text-slate-400 text-[10px]">LEDGER</div>
+              <div class="font-bold text-purple-400">Event Audit</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Closed-Loop Feedback Flow Bar -->
+    <div class="mt-8 pt-6 border-t border-slate-800/80">
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mono mb-3 flex items-center justify-between">
+        <span>The Self-Adaptive Operational Closed Loop</span>
+        <span class="text-emerald-400">Continuous Learning Cycle</span>
+      </div>
+      <div class="grid grid-cols-7 gap-2 mono text-center text-xs">
+        <div class="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl text-slate-300">
+          <div class="text-emerald-400 font-bold mb-0.5">1. OBSERVE</div>
+          <div class="text-[10px] text-slate-400">Shopper & Store</div>
+        </div>
+        <div class="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl text-slate-300">
+          <div class="text-amber-400 font-bold mb-0.5">2. RECALL</div>
+          <div class="text-[10px] text-slate-400">Past Outcomes</div>
+        </div>
+        <div class="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl text-slate-300">
+          <div class="text-blue-400 font-bold mb-0.5">3. REASON</div>
+          <div class="text-[10px] text-slate-400">Groq LLM + Tools</div>
+        </div>
+        <div class="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl text-slate-300">
+          <div class="text-purple-400 font-bold mb-0.5">4. ACT</div>
+          <div class="text-[10px] text-slate-400">Execute Actions</div>
+        </div>
+        <div class="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl text-slate-300">
+          <div class="text-teal-400 font-bold mb-0.5">5. RE-OBSERVE</div>
+          <div class="text-[10px] text-slate-400">Telemetry Drift</div>
+        </div>
+        <div class="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl text-slate-300">
+          <div class="text-amber-400 font-bold mb-0.5">6. LEARN</div>
+          <div class="text-[10px] text-slate-400">Retain Outcome</div>
+        </div>
+        <div class="bg-emerald-950/40 border border-emerald-500/40 p-2.5 rounded-xl text-emerald-300">
+          <div class="font-bold mb-0.5">7. EVOLVE</div>
+          <div class="text-[10px] text-emerald-400/80">30 → 50 Units</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

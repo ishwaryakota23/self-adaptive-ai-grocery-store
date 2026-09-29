@@ -1,6 +1,6 @@
-import { db } from './db';
-import { eventService } from './eventService';
-import { DemandFunnelSummary, SaleRecord, AisleTraffic, CheckoutQueue } from '../types';
+import { db } from './db.js';
+import { eventService } from './eventService.js';
+import { DemandFunnelSummary, SaleRecord, AisleTraffic, CheckoutQueue } from '../types/index.js';
 
 class AnalyticsService {
   public getDemandFunnel(productId?: string): DemandFunnelSummary {

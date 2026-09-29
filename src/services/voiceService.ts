@@ -1,5 +1,5 @@
-import { LanguageCode } from '../types';
-import { eventService } from './eventService';
+import { LanguageCode } from '../types/index.js';
+import { eventService } from './eventService.js';
 
 export interface TTSResult {
   played: boolean;

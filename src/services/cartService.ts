@@ -1,5 +1,5 @@
-import { db } from './db';
-import { CartItem, Product } from '../types';
+import { db } from './db.js';
+import { CartItem, Product } from '../types/index.js';
 
 class CartService {
   public getCart(sessionId: string): CartItem[] {

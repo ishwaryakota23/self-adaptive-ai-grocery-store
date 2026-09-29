@@ -55,6 +55,7 @@ tmp/
 temp/
 .cache/
 .parcel-cache/
+.chrome_profile/
 coverage/
 .nyc_output/
 

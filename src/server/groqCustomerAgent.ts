@@ -1,10 +1,10 @@
 declare const process: any;
 
-import { GROQ_TOOL_DEFINITIONS, executeCustomerAgentTool, ToolExecutionResult } from '../services/customerAgentTools';
-import { languageDetector, LanguageDetectionResult } from '../services/languageDetector';
-import { hindsightService } from '../services/hindsightService';
-import { db } from '../services/db';
-import { Product, ShoppingMission, CartItem } from '../types';
+import { GROQ_TOOL_DEFINITIONS, executeCustomerAgentTool, ToolExecutionResult } from '../services/customerAgentTools.js';
+import { languageDetector, LanguageDetectionResult } from '../services/languageDetector.js';
+import { hindsightService } from '../services/hindsightService.js';
+import { db } from '../services/db.js';
+import { Product, ShoppingMission, CartItem } from '../types/index.js';
 
 export interface GroqAgentRequest {
   sessionId: string;
@@ -41,7 +41,7 @@ export class GroqCustomerAgentServer {
   }
 
   private getModel(): string {
-    return process.env.GROQ_MODEL?.trim() || 'llama-3.3-70b-versatile';
+    return process.env.GROQ_MODEL?.trim() || 'qwen/qwen3.8-27b';
   }
 
   public isConfigured(): boolean {
@@ -52,7 +52,8 @@ export class GroqCustomerAgentServer {
   public async processRequest(req: GroqAgentRequest): Promise<GroqAgentResponse> {
     const sessionId = req.sessionId || 'USER00001';
     const customerId = req.customerId || sessionId;
-    const input = req.input.trim();
+    const rawInput = req.input || (req as any).message || (req as any).query || '';
+    const input = rawInput.trim();
 
     // 1. Language Detection & Context
     const langResult: LanguageDetectionResult = languageDetector.detectLanguage(input, sessionId);
@@ -79,19 +80,29 @@ export class GroqCustomerAgentServer {
     const cartTotals = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
     const prefs = db.getCustomerPreferences(customerId);
 
-    // 3b. Recall Experiential Memories from Hindsight Customer Bank (Section 10, 11)
+    // 3b. Recall Experiential Memories from Hindsight Customer Bank with 2.5s race timeout
     let memoryPromptInjection = '';
     let recalledMemoriesList: string[] = [];
     try {
-      const hsRecall = await hindsightService.recallCustomerMemories(customerId, input);
+      const recallPromise = hindsightService.recallCustomerMemories(customerId, input);
+      const timeoutPromise = new Promise<{ success: boolean; results: any[]; promptString: string }>(
+        resolve => setTimeout(() => resolve({ success: false, results: [], promptString: '' }), 2500)
+      );
+      const hsRecall = await Promise.race([recallPromise, timeoutPromise]);
       if (hsRecall.success && hsRecall.results.length > 0) {
         recalledMemoriesList = hsRecall.results.map(r => r.text);
-        if (hsRecall.promptString) {
-          memoryPromptInjection = `\nPAST EXPERIENCES & PREFERENCES FROM PREVIOUS VISITS (Hindsight Memory):\n${hsRecall.promptString}\nCRITICAL: Personalize suggestions, adhere to dietary bounds, and respect past preferences.\n`;
-        } else {
-          memoryPromptInjection = `\nPAST EXPERIENCES & PREFERENCES FROM PREVIOUS VISITS (Hindsight Memory):\n` +
-            hsRecall.results.map(r => `- ${r.text}`).join('\n') +
-            `\nCRITICAL: Personalize suggestions, adhere to dietary bounds, and respect past preferences.\n`;
+        memoryPromptInjection = `\nPAST EXPERIENCES & PREFERENCES FROM PREVIOUS VISITS (Hindsight Memory):\n` +
+          recalledMemoriesList.slice(0, 4).map(t => `- ${t}`).join('\n') +
+          `\nCRITICAL: Personalize suggestions, adhere to dietary bounds, and respect past preferences.\n`;
+      } else if (prefs) {
+        const dbMemories: string[] = [];
+        if (prefs.dietary_preferences?.length) dbMemories.push(`Dietary: ${prefs.dietary_preferences.join(', ')}`);
+        if (prefs.preferred_cuisine?.length) dbMemories.push(`Preferred cuisine: ${prefs.preferred_cuisine.join(', ')}`);
+        if (prefs.preferred_brands?.length) dbMemories.push(`Preferred brands: ${prefs.preferred_brands.join(', ')}`);
+        if (dbMemories.length > 0) {
+          recalledMemoriesList = dbMemories;
+          memoryPromptInjection = `\nCUSTOMER PREFERENCES & PROFILE (Episodic Profile):\n` +
+            dbMemories.map(m => `- ${m}`).join('\n') + '\n';
         }
       }
     } catch (err: any) {
@@ -210,11 +221,31 @@ Rules:
       const choice = firstData.choices?.[0];
       const assistantMessage = choice?.message;
 
-      // 5. Handle Tool Calls if Groq requested them
-      if (assistantMessage?.tool_calls && assistantMessage.tool_calls.length > 0) {
+      // 5. Handle Tool Calls if Groq requested them (Native tool_calls or Qwen <tool_call> tag)
+      let toolCalls = assistantMessage?.tool_calls || [];
+      if (toolCalls.length === 0 && assistantMessage?.content && assistantMessage.content.includes('<tool_call>')) {
+        const match = assistantMessage.content.match(/<function=([a-zA-Z0-9_]+)>([\s\S]*?)<\/function>/);
+        if (match) {
+          const fnName = match[1];
+          let args: any = {};
+          try { args = JSON.parse(match[2].trim() || '{}'); } catch (e) {}
+          toolCalls = [{
+            id: 'call_' + Date.now(),
+            type: 'function',
+            function: {
+              name: fnName,
+              arguments: JSON.stringify(args)
+            }
+          }];
+          assistantMessage.tool_calls = toolCalls;
+          assistantMessage.content = null;
+        }
+      }
+
+      if (toolCalls && toolCalls.length > 0) {
         messages.push(assistantMessage);
 
-        for (const toolCall of assistantMessage.tool_calls) {
+        for (const toolCall of toolCalls) {
           const fnName = toolCall.function.name;
           let fnArgs: Record<string, any> = {};
           try {
@@ -295,7 +326,11 @@ Rules:
 
         if (secondResponse.ok) {
           const secondData = await secondResponse.json();
-          const finalReply = secondData.choices?.[0]?.message?.content || "I've checked the store inventory for you.";
+          let finalReply = secondData.choices?.[0]?.message?.content || "I've checked the store inventory for you.";
+          if (finalReply.includes('<tool_call>')) {
+            finalReply = finalReply.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '').trim() ||
+              (identifiedProduct ? `You can find ${identifiedProduct.name} in ${identifiedProduct.aisle}.` : "I've checked the store inventory for you.");
+          }
 
           // Build dynamic quick actions based on tool results
           const quickActions = this.buildQuickActions(toolExecutions, identifiedProduct, dynamicSubstitutes, sessionId);
@@ -312,15 +347,12 @@ Rules:
               lower.includes('nachuthundi') || lower.includes('pasand') || lower.includes('yaad rakhna');
 
             if (isPref) {
-              const ret = await hindsightService.retainCustomerExperience({
+              hindsightService.retainCustomerExperience({
                 customerId,
                 observation: input,
                 context: `Customer preference declared during session ${sessionId}`,
                 tags: ['preference', langResult.detected_language]
-              });
-              if (ret.success) {
-                retainedDocId = ret.memoryId;
-              }
+              }).catch(e => console.warn('[CustomerAgent] Background retention:', e?.message));
             }
           } catch (err: any) {
             console.warn('[CustomerAgent] Hindsight retention failed gracefully:', err?.message || err);
@@ -360,15 +392,12 @@ Rules:
           lower.includes('nachuthundi') || lower.includes('pasand') || lower.includes('yaad rakhna');
 
         if (isPref) {
-          const ret = await hindsightService.retainCustomerExperience({
+          hindsightService.retainCustomerExperience({
             customerId,
             observation: input,
             context: `Customer preference declared during session ${sessionId}`,
             tags: ['preference', langResult.detected_language]
-          });
-          if (ret.success) {
-            retainedDocId = ret.memoryId;
-          }
+          }).catch(e => console.warn('[CustomerAgent] Background retention:', e?.message));
         }
       } catch (err: any) {
         console.warn('[CustomerAgent] Hindsight retention failed gracefully:', err?.message || err);
