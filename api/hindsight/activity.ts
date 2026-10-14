@@ -1,4 +1,5 @@
 import { hindsightService } from '../../src/services/hindsightService.js';
+import { authenticateManagerRequest } from '../_auth.js';
 import { handleCors, sendJson } from '../_utils.js';
 
 export default async function handler(req: any, res: any) {
@@ -9,15 +10,20 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const activities = hindsightService.getActivityLog();
+    authenticateManagerRequest(req);
+    const activities = await hindsightService.fetchCloudActivityLog();
     return sendJson(res, 200, {
       success: true,
-      activities
+      activities,
+      activitySource: 'hindsight-cloud-audit-log',
+      note: 'Entries are Hindsight Cloud audit log records for the configured store and security banks.'
     });
   } catch (err: any) {
-    return sendJson(res, 500, {
+    const status = /authentication|manager session/i.test(err?.message || '') ? 403 : 500;
+    return sendJson(res, status, {
       success: false,
-      error: err?.message || 'Failed to fetch Hindsight activity'
+      error: hindsightService.safeDiagnosticError(err),
+      activitySource: 'hindsight-cloud-audit-log-unavailable'
     });
   }
 }

@@ -1,6 +1,267 @@
-export type UserRole = 'CUSTOMER' | 'STORE_MANAGER';
+export type UserRole = 'CUSTOMER' | 'EMPLOYEE' | 'STORE_MANAGER';
 export type LanguageCode = 'en' | 'te' | 'hi';
 export type InteractionMode = 'voice' | 'chat' | 'browse';
+
+// ==========================================
+// 1. CORE CUSTOMER IDENTITY & SHOPPING SESSION
+// ==========================================
+
+export interface Customer {
+  customer_id: string; // e.g. "CUST-1001"
+  email?: string; // Primary communication gateway
+  email_verified_at?: string;
+  whatsapp_number?: string; // Optional legacy / extensible channel
+  name: string;
+  language: LanguageCode;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerIdentityToken {
+  token_id: string;
+  customer_id: string;
+  secure_token: string; // signed/opaque token for QR e.g. "CID_SEC_..."
+  qr_payload: string;
+  status: 'active' | 'revoked' | 'expired';
+  delivered_via_email?: boolean;
+  delivered_via_whatsapp?: boolean;
+  created_at: string;
+  updated_at: string;
+  revoked_at?: string;
+  expires_at?: string;
+}
+
+export type SessionLifecycleStatus =
+  | 'SHOPPING'
+  | 'CHECKOUT_REQUESTED'
+  | 'WAITING_FOR_KIOSK'
+  | 'KIOSK_IDENTIFIED'
+  | 'VERIFICATION_IN_PROGRESS'
+  | 'VERIFICATION_PASSED'
+  | 'PAYMENT_PENDING'
+  | 'PAYMENT_SUCCESS'
+  | 'ORDER_COMPLETED'
+  | 'DEMO_COMPLETED'
+  | 'MISMATCH_DETECTED'
+  | 'EMPLOYEE_VERIFICATION'
+  | 'CONFIRMED_INCIDENT';
+
+export interface ShoppingSession {
+  session_id: string; // e.g. "SESS-5001"
+  customer_id: string; // references Customer
+  device_type: 'KIOSK' | 'MOBILE' | 'SYNCED' | 'LARGE_DISPLAY';
+  status: 'active' | 'completed' | 'abandoned';
+  lifecycle_status?: SessionLifecycleStatus;
+  assigned_kiosk_id?: string;
+  interaction_mode: InteractionMode;
+  started_at: string;
+  last_activity_at: string;
+  completed_at?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface Cart {
+  cart_id: string; // e.g. "CART-9001"
+  session_id: string; // references ShoppingSession
+  customer_id: string; // references Customer
+  status: 'active' | 'checked_out' | 'abandoned';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionHandoff {
+  handoff_id: string;
+  session_id: string;
+  customer_id: string;
+  secure_token: string; // e.g. "SQ_HANDOFF_..."
+  qr_payload: string;
+  status: 'active' | 'used' | 'expired' | 'revoked';
+  created_at: string;
+  expires_at: string;
+  used_at?: string;
+  cart_snapshot?: CartItem[];
+  customer_snapshot?: Customer;
+}
+
+// Security Agent Event Model
+export type SecurityEventType =
+  | 'INVALID_CUSTOMER_QR'
+  | 'EXPIRED_CUSTOMER_QR'
+  | 'REVOKED_CUSTOMER_QR'
+  | 'INVALID_SESSION_QR'
+  | 'EXPIRED_SESSION_QR'
+  | 'SESSION_MISMATCH'
+  | 'CROSS_CUSTOMER_ACCESS_ATTEMPT'
+  | 'CROSS_CUSTOMER_ACCESS_VIOLATION'
+  | 'CROSS_CUSTOMER_SESSION_HIJACK'
+  | 'CROSS_CUSTOMER_HIJACK_ATTEMPT'
+  | 'SESSION_HIJACK_ATTEMPT'
+  | 'OTP_RATE_LIMIT_EXCEEDED'
+  | 'OTP_MAX_ATTEMPTS_EXCEEDED'
+  | 'MANAGER_AUTH_FAILURE'
+  | 'UNAUTHORIZED_MANAGER_ACCESS'
+  | 'CART_MANIPULATION'
+  | 'CART_TAMPER_DETECTED'
+  | 'QUANTITY_TAMPER_DETECTED'
+  | 'CHECKOUT_QUANTITY_MISMATCH'
+  | 'RATE_LIMIT_EXCEEDED'
+  | 'DUPLICATE_PAYMENT_ATTEMPT'
+  | 'PAYMENT_FAILURE'
+  | 'PRICE_MISMATCH'
+  | 'UNAUTHORIZED_ACCESS'
+  | 'SECURITY_AUDIT_PASS'
+  | 'CONCURRENT_PURCHASE_CONTENTION'
+  | 'AMBIGUOUS_ANOMALY_ESCALATED'
+  | 'FALSE_POSITIVE_RESOLVED'
+  | 'BENIGN_BEHAVIOR_VERIFIED'
+  // CCTV & Surveillance Scenarios
+  | 'NORMAL_SHOPPING_ACTIVITY'
+  | 'HIGH_AISLE_TRAFFIC'
+  | 'UNUSUAL_REPEATED_SHELF_ACTIVITY'
+  | 'POSSIBLE_PRODUCT_CONCEALMENT'
+  | 'REPEATED_PRODUCT_CONCEALMENT'
+  | 'SAFETY_DISTURBANCE'
+  | 'AGGRESSIVE_INCIDENT'
+  | 'ELECTRICAL_HAZARD'
+  | 'POWER_OUTAGE'
+  | 'LONG_DURATION_POWER_OUTAGE';
+
+// CCTV Surveillance Manifest & Player Models
+export interface CCTVTimelineStage {
+  time: string; // e.g. "00:08"
+  timestamp: string; // e.g. "11:17:08"
+  stage: string; // e.g. "SHELF_APPROACH"
+  action: string;
+  status: 'OBSERVED' | 'DETECTED' | 'FLAGGED' | 'ESCALATED' | 'NORMAL' | 'CRITICAL' | 'ACTION_REQUIRED';
+}
+
+export interface CCTVVideoEntry {
+  video_id: string;
+  file_path: string;
+  file_name: string;
+  camera_id: string;
+  camera_label: string;
+  scenario_type: string;
+  scenario_title: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  expected_event: SecurityEventType;
+  description: string;
+  email_required: boolean;
+  operational_impact: boolean;
+  store_impact?: string;
+  evidence_frame_url?: string;
+  temporal_timeline: CCTVTimelineStage[];
+  security_reasoning: string;
+  recommended_action: string;
+  confidence?: number;
+}
+
+export interface CCTVCameraStatus {
+  camera_id: string;
+  name: string;
+  location: string;
+  status: 'NORMAL' | 'MONITORING' | 'WARNING' | 'HIGH_ALERT' | 'CRITICAL';
+  active_video_id?: string;
+  last_event?: string;
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+export interface SecurityEvent {
+  id: string;
+  event_type: SecurityEventType;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status?: 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED';
+  customer_id?: string;
+  session_id?: string;
+  order_id?: string;
+  details: string;
+  metadata?: Record<string, any>;
+  timestamp: string;
+  digital_quantity?: number;
+  physical_quantity?: number;
+  inventory_state?: number;
+  expected_inventory_after?: number;
+  triggering_rule?: string;
+  recommendedAction?: string;
+  resolution?: string;
+  resolved_at?: string;
+  isFalsePositive?: boolean;
+  investigationNote?: string;
+  emailDispatched?: boolean;
+}
+
+// Physical Checkout Observation & 3-Source Comparison Models
+export interface PhysicalBasketItem {
+  product_id: string;
+  product_name: string;
+  observed_quantity: number;
+  confidence: number;
+  bounding_box?: { x: number; y: number; w: number; h: number };
+}
+
+export interface PhysicalCheckoutObservation {
+  observation_id: string;
+  session_id: string;
+  camera_id: string;
+  observed_at: string;
+  items: PhysicalBasketItem[];
+}
+
+export interface CheckoutComparisonItem {
+  product_id: string;
+  sku_id?: string;
+  barcode?: string;
+  pack_size?: string;
+  product_name: string;
+  digital_quantity: number;
+  physical_quantity: number;
+  verified_quantity?: number;
+  remaining_quantity?: number;
+  current_inventory: number;
+  expected_inventory_after_sale: number;
+  status: 'MATCH' | 'DISCREPANCY_OVER_PHYSICAL' | 'DISCREPANCY_UNDER_PHYSICAL' | 'STOCK_INSUFFICIENT' | 'PACK_SIZE_MISMATCH' | 'UNBILLED_ITEM';
+  difference: number;
+  discrepancy?: number;
+  scanned_sku?: string;
+  scanned_barcode?: string;
+  scanned_pack_size?: string;
+  mismatch_note?: string;
+}
+
+export interface CheckoutVerificationResult {
+  verified: boolean;
+  passed?: boolean;
+  comparison: CheckoutComparisonItem[];
+  hasDiscrepancy: boolean;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  customerAlert?: {
+    severity: 'low' | 'medium' | 'high';
+    title?: string;
+    message: string;
+    actionable_options: Array<'correct_cart' | 'return_item' | 'request_staff'>;
+  };
+  managerAlert?: {
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    message: string;
+    discrepancyCount: number;
+    recommendedAction: string;
+    emailDispatched?: boolean;
+    eventId?: string;
+  };
+  securityEventId?: string;
+  recalledSecurityHindsight?: Array<{ pattern: string; resolution: string; takeaway: string }>;
+  recalledHindsightInsight?: string;
+}
+
+export interface ManagerAction {
+  id: string;
+  manager_id: string;
+  action_type: 'APPROVE_RECOMMENDATION' | 'DISMISS_RECOMMENDATION' | 'MODIFY_RECOMMENDATION' | 'RESTOCK_OVERRIDE' | 'COUNTER_OVERRIDE' | 'SECURITY_DISMISSAL' | string;
+  target_id: string;
+  details: string;
+  timestamp: string;
+}
 
 export interface UserProfile {
   id: string;
@@ -11,6 +272,7 @@ export interface UserProfile {
   email: string;
   avatar_url?: string;
   created_at: string;
+  whatsapp_number?: string;
 }
 
 export interface CustomerSession {
@@ -19,18 +281,99 @@ export interface CustomerSession {
   created_at: string;
   last_active_at: string;
   status: 'active' | 'completed' | 'abandoned';
-  device_type: 'LARGE_DISPLAY' | 'MOBILE' | 'SYNCED';
+  device_type: 'LARGE_DISPLAY' | 'MOBILE' | 'SYNCED' | 'KIOSK';
   metadata?: Record<string, any>;
+  customer_id?: string;
 }
 
 export interface ManagerAccount {
   employee_id: string; // e.g. "EMP-1042"
   dob: string; // "YYYY-MM-DD" e.g. "1985-06-15"
   name: string;
+  phone?: string; // e.g. "9618633599"
+  presence?: 'ACTIVE' | 'AWAY' | 'IN_TRAFFIC';
   role: 'STORE_MANAGER' | 'ADMIN';
   branch_id: string;
   branch_name: string;
   last_login_at?: string;
+}
+
+// ==========================================
+// 1B. EMPLOYEE IDENTITY & OPERATIONAL CONSOLE
+// ==========================================
+
+export interface EmployeeAccount {
+  employee_id: string; // Unique, e.g. "EMP-1047"
+  dob: string; // "YYYY-MM-DD" e.g. "1994-08-22"
+  name: string;
+  role: string; // e.g. "Exit Verification Officer", "Security Responder", "Floor Associate", "Inventory Specialist"
+  department: string; // "Operations", "Security & Loss Prevention", "Inventory", "Customer Service"
+  email?: string;
+  qr_token: string; // Distinct token format e.g. "GROCERAI_EMP_V1:EMP-1047:..."
+  registered_at: string;
+  last_login_at?: string;
+  status: 'active' | 'suspended' | 'on_leave';
+}
+
+export interface EmployeeAttendanceRecord {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  role: string;
+  department: string;
+  timestamp: string; // ISO
+  time_display: string; // e.g. "19:42"
+  location: string; // e.g. "KIOSK-MAIN-ENTRANCE-01", "STATION-EXIT-01"
+  status: 'PRESENT' | 'CHECKED_OUT';
+  verified_method: 'QR_SCAN' | 'MOBILE_AUTH' | 'MANUAL';
+}
+
+export interface EmployeeSession {
+  session_id: string;
+  employee_id: string;
+  started_at: string;
+  last_active_at: string;
+  location: string;
+  status: 'active' | 'ended';
+}
+
+export interface EmployeeSecurityResolution {
+  id: string;
+  eventId: string;
+  employeeId: string;
+  employeeName: string;
+  action: 'FALSE_POSITIVE' | 'CONFIRMED_INCIDENT' | 'BENIGN_CORRECTION';
+  notes: string;
+  timestamp: string;
+  hindsightDocumentId?: string;
+}
+
+export interface EmployeeOperationsSummary {
+  employeesPresent: number;
+  totalEmployees: number;
+  securityEventsToday: number;
+  resolved: number;
+  pending: number;
+  falsePositives: number;
+  confirmedIncidents: number;
+  averageResponseTimeSec: number;
+  activeEmployees: Array<{
+    employee_id: string;
+    name: string;
+    role: string;
+    department: string;
+    location: string;
+    status: string;
+    eventsHandledCount: number;
+  }>;
+  recommendation?: {
+    title: string;
+    description: string;
+    urgency: 'high' | 'medium' | 'low';
+    action: string;
+  };
+  roster?: Array<any>;
+  staffingRecommendation?: string;
 }
 
 export interface CustomerPreferences {
@@ -57,10 +400,15 @@ export interface Category {
 
 export interface Product {
   id: string;
+  sku_id?: string; // Authoritative SKU identity e.g. "CHEESE_200G"
+  barcode?: string; // Physical barcode e.g. "8901262010029"
   category_id: string;
   category_name?: string;
   name: string;
   brand: string;
+  variant?: string; // Variant e.g. "Processed Block", "Toned", "Chakki Whole Wheat"
+  pack_size?: string; // Explicit pack size e.g. "200g", "100g", "1L", "500ml", "1kg", "5kg"
+  pack_unit?: string; // Unit e.g. "g", "ml", "kg", "L"
   description: string;
   price: number;
   original_price?: number;
@@ -80,6 +428,35 @@ export interface Product {
   rating: number;
   reviews_count: number;
   is_organic?: boolean;
+  unit?: string;
+}
+
+// Authoritative Barcode / SKU Resolution Result
+export interface BarcodeResolutionResult {
+  barcode: string;
+  found: boolean;
+  product?: Product;
+  sku_id?: string;
+  pack_size?: string;
+  variant?: string;
+  price?: number;
+  error?: string;
+}
+
+// Item-by-item verification scan record at checkout kiosk
+export interface ItemVerificationScanRecord {
+  scan_id: string;
+  timestamp: string;
+  scanned_barcode: string;
+  scanned_sku: string;
+  scanned_product_name: string;
+  scanned_pack_size: string;
+  target_cart_sku: string;
+  target_cart_pack_size: string;
+  match: boolean;
+  mismatch_type?: 'PACK_SIZE_MISMATCH' | 'WRONG_PRODUCT' | 'UNBILLED_ITEM' | 'QUANTITY_EXCEEDED' | 'BARCODE_UNREADABLE';
+  cv_confidence: number;
+  message: string;
 }
 
 export interface InventoryItem {
@@ -131,10 +508,13 @@ export interface ShoppingMission {
 
 export interface CartItem {
   id: string;
-  customer_id: string; // mapped to customer session ID (e.g. USER00001)
+  cart_id?: string;
+  session_id?: string;
+  customer_id: string; // mapped to customer session ID or customer ID
   product_id: string;
   product: Product;
   quantity: number;
+  price_snapshot?: number;
   added_at: string;
 }
 
@@ -164,12 +544,15 @@ export interface SubstitutionRecord {
   related_order_id?: string;
   quantity: number;
   timestamp: string;
+  original_product_id?: string;
+  suggested_product_id?: string;
+  accepted?: boolean;
 }
 
 export interface NotificationItem {
   id: string;
-  customer_id: string;
-  type: 'product_found' | 'low_stock' | 'unavailable' | 'alternative' | 'nearby_offer' | 'navigation' | 'queue_alert';
+  customer_id?: string;
+  type: 'product_found' | 'low_stock' | 'unavailable' | 'alternative' | 'nearby_offer' | 'navigation' | 'queue_alert' | 'security_alert' | 'system_alert';
   title: string;
   message: string;
   product_id?: string;
@@ -198,10 +581,15 @@ export interface PaymentRecord {
   id: string;
   order_id?: string;
   customer_session_id: string;
+  session_id?: string;
+  customer_id?: string;
   amount: number;
   payment_method: 'UPI' | 'Card' | 'Wallet' | 'Cash';
   status: PaymentStatus;
   transaction_ref: string;
+  provider?: string;
+  idempotency_key?: string;
+  metadata?: Record<string, any>;
   failure_reason?: string;
   created_at: string;
 }
@@ -216,7 +604,10 @@ export interface SaleRecord {
   total_amount: number;
   payment_method: 'UPI' | 'Card' | 'Wallet' | 'Cash';
   order_id?: string;
+  session_id?: string;
+  customer_id?: string;
   created_at: string;
+  sold_at?: string;
 }
 
 export interface StoreEvent {
@@ -274,7 +665,24 @@ export type EventType =
   | 'STORE_AGENT_RECOMMENDATION_MODIFIED'
   | 'STORE_AGENT_RECOMMENDATION_DISMISSED'
   | 'STORE_AGENT_ACTION_EXECUTED'
-  | 'STORE_AGENT_OUTCOME_RECORDED';
+  | 'STORE_AGENT_OUTCOME_RECORDED'
+  | 'PRODUCT_STOCKOUT'
+  | 'LOW_STOCK_DETECTED'
+  | 'PRODUCT_RESTOCKED'
+  | 'PRODUCT_OVERSTOCKED'
+  | 'PRODUCT_WASTAGE'
+  | 'CUSTOMER_REQUEST_UNFULFILLED'
+  | 'REPEATED_PRODUCT_REQUEST'
+  | 'DEMAND_SPIKE'
+  | 'DEMAND_DROP'
+  | 'CHECKOUT_QUEUE_INCREASED'
+  | 'RESTOCK_OUTCOME'
+  | 'MANAGER_APPROVED'
+  | 'MANAGER_MODIFIED'
+  | 'MANAGER_DISMISSED'
+  | 'RECOMMENDATION_SUCCESS'
+  | 'RECOMMENDATION_FAILURE'
+  | 'UNFULFILLED_DEMAND';
 
 export interface HistoricalEvent {
   event_id: string;
@@ -304,15 +712,19 @@ export interface AisleTraffic {
 export interface CheckoutQueue {
   id: string;
   counter_number: number;
+  kiosk_id?: string; // e.g. "KIOSK-01"
+  kiosk_name?: string; // e.g. "Verification Kiosk 1"
   customer_count: number;
   estimated_wait_mins: number;
   status: 'open' | 'closed' | 'congested';
   operator_name?: string;
+  verification_throughput_per_hr?: number;
   recorded_at: string;
 }
 
 export type StoreRecommendationType =
   | 'RESTOCK'
+  | 'OVERSTOCK'
   | 'STOCKOUT'
   | 'UNFULFILLED_DEMAND'
   | 'DEMAND_SPIKE'
@@ -335,11 +747,16 @@ export interface StructuredRecommendation {
   createdAt: string;
   relatedEvents?: string[];
   confidence?: number;
+  currentFacts?: string[];
+  historicalContext?: string[];
+  expectedBenefit?: string;
+  downsideRisk?: string;
+  estimatedImpact?: string;
 }
 
 export interface AIRecommendation {
   id: string;
-  type: 'restock' | 'open_counter' | 'discount' | 'relocate' | string;
+  type: 'restock' | 'open_counter' | 'discount' | 'relocate' | 'overstock' | string;
   title: string;
   description: string;
   product_id?: string;
@@ -354,6 +771,10 @@ export interface AIRecommendation {
   created_at: string;
   evidence?: string[];
   suggested_quantity?: number;
+  current_facts?: string[];
+  historical_context?: string[];
+  expected_benefit?: string;
+  downside_risk?: string;
 }
 
 export interface StoreOverview {
@@ -411,6 +832,10 @@ export interface ActionOutcome {
   sales_delta: string;
   is_hindsight_stored: boolean;
   hindsight_id?: string;
+  evidence_source?: 'verified-operation' | 'synthetic-demo' | 'unverified';
+  roi_report?: RecommendationRoiReport;
+  net_impact?: number;
+  roi_classification?: RoiMetricClassification;
 }
 
 export interface CustomerMemoryInsight {
@@ -440,13 +865,16 @@ export interface StoreMemoryInsight {
 
 export interface Order {
   id: string;
-  customer_id: string; // mapped to customer session ID (e.g. USER00001)
+  order_id?: string;
+  customer_id: string; // mapped to customer ID or session ID
+  session_id?: string;
+  cart_id?: string;
   total_amount: number;
-  subtotal: number;
-  tax: number;
-  payment_method: 'UPI' | 'Card' | 'Wallet' | 'Cash';
-  payment_status: 'PAYMENT_SUCCESS';
-  status: 'completed' | 'processing' | 'cancelled';
+  subtotal?: number;
+  tax?: number;
+  payment_method?: 'UPI' | 'Card' | 'Wallet' | 'Cash';
+  payment_status: 'PAYMENT_SUCCESS' | 'PAID' | 'COMPLETED';
+  status?: 'completed' | 'processing' | 'cancelled';
   items: {
     product_id: string;
     product_name: string;
@@ -454,6 +882,7 @@ export interface Order {
     price: number;
   }[];
   created_at: string;
+  completed_at?: string;
 }
 
 export interface DemandFunnelSummary {
@@ -463,4 +892,93 @@ export interface DemandFunnelSummary {
   checkoutAttempts: number;
   confirmedSales: number;
   unfulfilledDemand: number;
+}
+
+// ==========================================
+// ROI ENGINE & BUSINESS IMPACT TYPES
+// ==========================================
+export type RoiMetricClassification = 'ACTUAL' | 'ESTIMATED' | 'PROJECTED';
+export type RoiDataConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT_DATA';
+
+export interface RoiMetricResult {
+  metricName: string;
+  classification: RoiMetricClassification;
+  value: number; // 0 if unavailable or insufficient data
+  formattedValue: string; // e.g., "₹1,240" or "+22%" or "ROI unavailable — insufficient cost data"
+  formula: string;
+  inputs: Record<string, any>;
+  calculatedAt: string;
+  confidence: RoiDataConfidence;
+  dataPeriod: string;
+  isSufficientData: boolean;
+  statusNote?: string;
+  unit?: 'INR' | 'PERCENT' | 'UNITS';
+}
+
+export interface RecommendationRoiReport {
+  recommendationId: string;
+  actionId?: string;
+  outcomeId?: string;
+  productId?: string;
+  productName?: string;
+  timestamp: string;
+  metrics: {
+    salesOpportunityPreserved?: RoiMetricResult;
+    wastageReduced?: RoiMetricResult;
+    demandFulfillment?: RoiMetricResult;
+    inventoryHoldingImpact?: RoiMetricResult;
+    operationalCost?: RoiMetricResult;
+    netBusinessImpact?: RoiMetricResult;
+  };
+  classification: RoiMetricClassification;
+  grossBenefit: number;
+  totalCost: number;
+  netImpact: number;
+  isNetPositive: boolean;
+  summary: string;
+
+  // Explicit Self-Adaptive Closed Loop ROI Attributes (Expected ≠ Realized)
+  expectedBenefit?: number;
+  expectedBenefitFormatted?: string;
+  decisionCost?: number;
+  decisionCostFormatted?: string;
+  actualOutcomeMetric?: string;
+  realizedImpact?: number;
+  realizedImpactFormatted?: string;
+  isRealizedComputed?: boolean;
+  discrepancyNote?: string;
+}
+
+export interface BusinessImpactSummary {
+  period: string;
+  totalSalesOpportunityPreserved: RoiMetricResult;
+  totalWastageReduced: RoiMetricResult;
+  overallDemandFulfillmentImprovement: RoiMetricResult;
+  totalInventoryHoldingSavings: RoiMetricResult;
+  totalOperationalCost: RoiMetricResult;
+  netBusinessImpact: RoiMetricResult;
+  activeReportsCount: number;
+  lastUpdated: string;
+}
+
+// ==========================================
+// REMOTE MULTI-TERMINAL KIOSK STATE
+// ==========================================
+export type RemoteKioskStatus = 'ACTIVE' | 'STANDBY' | 'ACTIVATING';
+
+export interface RemoteKioskActivationEvent {
+  kioskId: string;
+  status: 'ACTIVE';
+  requestedBy: string;
+  commandSource: string;
+  timestamp: string;
+  message: string;
+}
+
+export interface RemoteKioskState {
+  id: string; // 'KIOSK_01' | 'KIOSK_02' | 'KIOSK_03'
+  name: string;
+  status: RemoteKioskStatus;
+  lastUpdated: string;
+  activationEvent?: RemoteKioskActivationEvent | null;
 }

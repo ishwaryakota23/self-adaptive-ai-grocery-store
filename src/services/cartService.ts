@@ -28,12 +28,7 @@ class CartService {
   }
 
   public getTotals(sessionId: string): { subtotal: number; tax: number; total: number; itemCount: number } {
-    const items = db.getCart(sessionId);
-    const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-    const tax = Math.round(subtotal * 0.05);
-    const total = subtotal + tax;
-    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-    return { subtotal, tax, total, itemCount };
+    return db.calculateAuthoritativeCartTotal(sessionId);
   }
 }
 

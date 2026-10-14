@@ -15,28 +15,44 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { hindsightService, MemoryActivityLogEntry } from '../services/hindsightService';
+import { hindsightBankAvailabilityLabel, hindsightConnectionLabel } from '../services/hindsightDashboardStatus';
+import { HindsightLearningLab } from './HindsightLearningLab';
 
 export const HindsightMemoryPanel: React.FC = () => {
   const [isHealthy, setIsHealthy] = useState<boolean | null>(null);
   const [activities, setActivities] = useState<MemoryActivityLogEntry[]>([]);
   const [query, setQuery] = useState('');
-  const [queryBank, setQueryBank] = useState<'store' | 'customer'>('store');
-  const [customerId, setCustomerId] = useState('USER00001');
+  const [queryBank, setQueryBank] = useState<'store' | 'security' | 'customer'>('store');
+  const [customerId, setCustomerId] = useState('CUST-1001');
   const [queryResults, setQueryResults] = useState<any[] | null>(null);
+  const [queryError, setQueryError] = useState('');
   const [isQuerying, setIsQuerying] = useState(false);
   const [activeTab, setActiveTab] = useState<'learning' | 'audit' | 'sandbox'>('learning');
   const [lastRefreshed, setLastRefreshed] = useState<string>(new Date().toLocaleTimeString());
+  const [serviceError, setServiceError] = useState('');
+  const [activityError, setActivityError] = useState('');
 
   const checkStatus = async () => {
     try {
       const healthy = await hindsightService.isHealthy();
       setIsHealthy(healthy);
-      setActivities(hindsightService.getActivityLog());
+      setServiceError(hindsightService.getHealthError());
+      try {
+        setActivities(await hindsightService.fetchActivityLog());
+        setActivityError('');
+      } catch (error: any) {
+        setActivities([]);
+        setActivityError(error?.message || 'Hindsight Cloud audit logs are unavailable.');
+      }
       setLastRefreshed(new Date().toLocaleTimeString());
-    } catch {
+    } catch (error: any) {
       setIsHealthy(false);
+      setServiceError(error?.message || 'Hindsight Cloud status could not be checked.');
     }
   };
+
+  const connectionStatus = hindsightService.getOperationalStatusSnapshot();
+  const connectionLabel = hindsightConnectionLabel(connectionStatus?.state, isHealthy === null);
 
   useEffect(() => {
     checkStatus();
@@ -47,16 +63,20 @@ export const HindsightMemoryPanel: React.FC = () => {
   const handleRunQuery = async () => {
     if (!query.trim()) return;
     setIsQuerying(true);
+    setQueryError('');
     try {
       const bankId = queryBank === 'store'
         ? hindsightService.getStoreBank()
+        : queryBank === 'security'
+        ? hindsightService.getSecurityBank()
         : hindsightService.getCustomerBank(customerId);
 
       const recallRes = await hindsightService.recall(bankId, query.trim());
-      setQueryResults(recallRes.results || []);
-      setActivities(hindsightService.getActivityLog());
+      setQueryResults(recallRes.success ? recallRes.results : []);
+      setQueryError(recallRes.error || '');
+      try { setActivities(await hindsightService.fetchActivityLog()); } catch { setActivities([]); }
     } catch (err: any) {
-      console.error(err);
+      setQueryError(err?.message || 'Hindsight recall failed. Check the server Cloud configuration and service status.');
       setQueryResults([]);
     } finally {
       setIsQuerying(false);
@@ -84,12 +104,17 @@ export const HindsightMemoryPanel: React.FC = () => {
                   : 'bg-amber-950/80 text-amber-400 border border-amber-500/30'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${isHealthy ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-                {isHealthy === true ? 'ONLINE (Port 8888)' : isHealthy === false ? 'OFFLINE (Fallback Active)' : 'CHECKING...'}
+                {connectionLabel}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Continuous experiential learning: <span className="text-slate-300 font-medium">Observe → Recall → Reason → Act → Retain → Adapt</span>
             </p>
+            {serviceError && <p className="mt-2 max-w-2xl text-xs text-rose-300" role="status">
+              {serviceError}
+              {connectionStatus?.diagnosticCode && <span className="ml-1 font-mono text-[10px] text-rose-200">{connectionStatus.diagnosticCode}</span>}
+            </p>}
+            <p className="mt-1 text-[10px] text-slate-500">Activity feed reads Hindsight Cloud audit logs for the store and security banks.</p>
           </div>
         </div>
 
@@ -103,7 +128,7 @@ export const HindsightMemoryPanel: React.FC = () => {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Demonstrable Learning Curve
+            Live Learning Lab
           </button>
           <button
             onClick={() => setActiveTab('audit')}
@@ -138,7 +163,7 @@ export const HindsightMemoryPanel: React.FC = () => {
               <div className="text-white font-mono font-bold">{hindsightService.getStoreBank()}</div>
             </div>
           </div>
-          <span className="text-[10px] text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-500/20 font-semibold">Active</span>
+          <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold ${connectionStatus?.storeBank.availability === 'available' ? 'text-emerald-400 bg-emerald-950/50 border-emerald-500/20' : 'text-rose-300 bg-rose-950/50 border-rose-500/20'}`}>{hindsightBankAvailabilityLabel(connectionStatus?.storeBank.availability)}</span>
         </div>
 
         <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
@@ -146,10 +171,21 @@ export const HindsightMemoryPanel: React.FC = () => {
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
             <div>
               <div className="text-[11px] text-slate-400 font-medium">Customer Bank Isolation</div>
-              <div className="text-white font-mono font-bold">grocerai-customer-&#123;id&#125;</div>
+              <div className="text-white font-mono font-bold">grocerai-customer-&lt;verified-customer-id&gt;</div>
             </div>
           </div>
-          <span className="text-[10px] text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-500/20 font-semibold">Strict 1:1</span>
+          <span className="text-[10px] text-slate-300 bg-slate-900 px-2 py-0.5 rounded-md border border-slate-700 font-semibold">ID pattern</span>
+        </div>
+
+        <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            <div>
+              <div className="text-[11px] text-slate-400 font-medium">Security Bank</div>
+              <div className="text-white font-mono font-bold">{hindsightService.getSecurityBank()}</div>
+            </div>
+          </div>
+          <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold ${connectionStatus?.securityBank.availability === 'available' ? 'text-emerald-400 bg-emerald-950/50 border-emerald-500/20' : 'text-rose-300 bg-rose-950/50 border-rose-500/20'}`}>{hindsightBankAvailabilityLabel(connectionStatus?.securityBank.availability)}</span>
         </div>
 
         <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
@@ -173,86 +209,18 @@ export const HindsightMemoryPanel: React.FC = () => {
       {/* TAB 1: DEMONSTRABLE LEARNING CURVE */}
       {activeTab === 'learning' && (
         <div className="space-y-4">
-          <div className="bg-gradient-to-br from-indigo-950/40 via-slate-950/60 to-slate-900 border border-indigo-500/30 rounded-3xl p-5 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                  Closed Learning Loop Evidence (Restock Adaptation)
-                </span>
-              </div>
-              <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                PROD-001 (Organic Milk)
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              {/* Step 1: Initial Action & Failure */}
-              <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center justify-between text-slate-400 font-bold">
-                  <span className="text-rose-400 flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5" /> 1. Past Experience
-                  </span>
-                  <span className="text-[10px] text-slate-500">Sunday 7 PM</span>
-                </div>
-                <p className="text-slate-300 font-medium leading-relaxed">
-                  Store Agent recommended standard restock of <span className="text-white font-bold">30 units</span> of Organic Milk during weekend rush.
-                </p>
-                <div className="text-[11px] text-rose-300/90 bg-rose-950/40 border border-rose-900/50 p-2 rounded-xl">
-                  <strong>Outcome:</strong> 30 units depleted in 42 mins (+45% demand surge). Store experienced 18 lost sales before next shift.
-                </div>
-              </div>
-
-              {/* Step 2: Hindsight Memory Retention */}
-              <div className="bg-slate-950/80 border border-indigo-900/50 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center justify-between text-slate-400 font-bold">
-                  <span className="text-indigo-400 flex items-center gap-1.5">
-                    <Database className="w-3.5 h-3.5" /> 2. Hindsight Retained
-                  </span>
-                  <span className="text-[10px] text-indigo-400 font-mono">grocerai-store-main</span>
-                </div>
-                <p className="text-slate-300 font-medium leading-relaxed">
-                  Experience retained into vector graph with semantic tags <code className="text-indigo-300 bg-indigo-950 px-1 py-0.5 rounded">['restock', 'surge']</code>.
-                </p>
-                <div className="text-[11px] text-indigo-200/90 bg-indigo-950/40 border border-indigo-800/50 p-2 rounded-xl font-mono">
-                  Takeaway: "Organic Milk weekend rush demand surge requires at least 50 units."
-                </div>
-              </div>
-
-              {/* Step 3: Adapted Future Decision */}
-              <div className="bg-slate-950/80 border border-emerald-900/50 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center justify-between text-slate-400 font-bold">
-                  <span className="text-emerald-400 flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5" /> 3. Adapted Decision
-                  </span>
-                  <span className="text-[10px] text-emerald-400 font-bold">CURRENT DECISION</span>
-                </div>
-                <p className="text-slate-300 font-medium leading-relaxed">
-                  Store Agent recalls past outcome and proactively adapts restock quantity upward to <span className="text-emerald-400 font-extrabold text-sm">50 units</span>.
-                </p>
-                <div className="text-[11px] text-emerald-200/90 bg-emerald-950/40 border border-emerald-800/50 p-2 rounded-xl">
-                  <strong>Explicit Citation:</strong> "Restock quantity adjusted from 30 to 50 units based on Sunday rush outcome."
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                Verified end-to-end against live Hindsight vector database
-              </span>
-              <span className="text-indigo-300 font-medium">
-                Model: Groq LLaMA / Qwen + Vectorize Hindsight Embeddings
-              </span>
-            </div>
-          </div>
+          <HindsightLearningLab />
         </div>
       )}
 
       {/* TAB 2: LIVE ACTIVITY FEED */}
       {activeTab === 'audit' && (
         <div className="space-y-3">
-          {activities.length === 0 ? (
+          {activityError ? (
+            <div className="text-center py-8 text-xs text-amber-200 bg-amber-950/20 border border-amber-800/60 rounded-2xl" role="status">
+              Hindsight Cloud audit activity could not be verified: {activityError}
+            </div>
+          ) : activities.length === 0 ? (
             <div className="text-center py-8 text-xs text-slate-500 bg-slate-950/40 border border-slate-800/60 rounded-2xl">
               No recent memory operations logged yet.
             </div>
@@ -298,15 +266,23 @@ export const HindsightMemoryPanel: React.FC = () => {
             <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 p-1 rounded-xl text-xs">
               <button
                 onClick={() => setQueryBank('store')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                   queryBank === 'store' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Store Bank
               </button>
               <button
+                onClick={() => setQueryBank('security')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  queryBank === 'security' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Security Bank
+              </button>
+              <button
                 onClick={() => setQueryBank('customer')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                   queryBank === 'customer' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -319,7 +295,7 @@ export const HindsightMemoryPanel: React.FC = () => {
                 type="text"
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
-                placeholder="Customer ID (e.g. USER00001)"
+                placeholder="Customer ID (e.g. CUST-1001)"
                 className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
               />
             )}
@@ -330,7 +306,13 @@ export const HindsightMemoryPanel: React.FC = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleRunQuery()}
-                placeholder={queryBank === 'store' ? "Query store memory (e.g. 'milk restock rush', 'counter congestion')" : "Query customer preferences (e.g. 'milk preference', 'dietary')"}
+                placeholder={
+                  queryBank === 'store'
+                    ? "Query store memory (e.g. 'milk restock rush', 'counter congestion')"
+                    : queryBank === 'security'
+                    ? "Query security memory (e.g. 'quantity mismatch', 'checkout correction', 'false positive')"
+                    : "Query customer preferences (e.g. 'milk preference', 'dietary', 'organic')"
+                }
                 className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
               />
               <button
@@ -352,7 +334,7 @@ export const HindsightMemoryPanel: React.FC = () => {
               </div>
               {queryResults.length === 0 ? (
                 <div className="text-center py-6 text-xs text-slate-500 bg-slate-950/40 border border-slate-800/60 rounded-2xl">
-                  No memories matched this query in bank <span className="font-mono">{queryBank === 'store' ? hindsightService.getStoreBank() : hindsightService.getCustomerBank(customerId)}</span>.
+                  {queryError || <>No memories matched this query in bank <span className="font-mono">{queryBank === 'store' ? hindsightService.getStoreBank() : queryBank === 'security' ? hindsightService.getSecurityBank() : hindsightService.getCustomerBank(customerId)}</span>.</>}
                 </div>
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">

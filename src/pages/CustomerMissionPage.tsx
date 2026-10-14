@@ -17,21 +17,59 @@ import { useApp } from '../context/AppContext';
 
 export const CustomerMissionPage: React.FC = () => {
   const navigate = useNavigate();
-  const { activeMission, updateMissionItemStatus, products, addToCart } = useApp();
+  const { activeMission, updateMissionItemStatus, activateMission, clearActiveMission, products, addToCart } = useApp();
   const [isEditing, setIsEditing] = useState(false);
 
   if (!activeMission) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
-        <Compass className="w-16 h-16 text-emerald-400 mb-4 animate-spin" />
-        <h2 className="text-xl font-bold">No Active Shopping Mission</h2>
-        <p className="text-sm text-slate-400 mt-2">Start a mission with your AI assistant or create one.</p>
+      <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-6">
+        <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <Compass className="w-8 h-8" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h2 className="text-2xl font-bold">No Active Shopping Mission</h2>
+          <p className="text-sm text-slate-400">
+            Shopping missions provide turn-by-turn checklist guidance through the store. Start one with your conversational assistant or choose a mission below.
+          </p>
+        </div>
+
         <button
           onClick={() => navigate('/customer/assistant')}
-          className="mt-6 px-6 py-2.5 bg-emerald-500 text-slate-950 font-bold rounded-xl text-sm"
+          className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-2xl text-sm shadow-lg shadow-emerald-500/20 cursor-pointer"
         >
-          Create Mission with Assistant
+          Create Custom Mission with AI Assistant
         </button>
+
+        <div className="w-full max-w-lg pt-4 space-y-3 text-left">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block text-center">
+            Or Choose A Curated Mission
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div
+              onClick={() => activateMission('mission-pasta-night')}
+              className="p-4 bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-2xl cursor-pointer transition-all space-y-2 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white group-hover:text-emerald-400">Pasta Night</span>
+                <span className="text-[10px] text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/30">6 items</span>
+              </div>
+              <p className="text-[11px] text-slate-400">Pasta, Tomatoes, Onions, Cheese, Olive Oil, Garlic</p>
+              <span className="text-[11px] font-semibold text-emerald-400 block pt-1">Start Mission →</span>
+            </div>
+
+            <div
+              onClick={() => activateMission('mission-breakfast-dairy')}
+              className="p-4 bg-slate-900 border border-slate-800 hover:border-cyan-500/50 rounded-2xl cursor-pointer transition-all space-y-2 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white group-hover:text-cyan-400">Breakfast & Dairy</span>
+                <span className="text-[10px] text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-500/30">3 items</span>
+              </div>
+              <p className="text-[11px] text-slate-400">Taaza Milk, Whole Wheat Bread, Farm Curd</p>
+              <span className="text-[11px] font-semibold text-cyan-400 block pt-1">Start Mission →</span>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -65,11 +103,29 @@ export const CustomerMissionPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="text-right">
-              <span className="text-2xl font-black text-emerald-400">
-                {foundCount}/{totalCount}
-              </span>
-              <span className="text-xs text-slate-400 block font-medium">items found</span>
+            <div className="flex flex-col sm:items-end gap-2">
+              <div className="text-right">
+                <span className="text-2xl font-black text-emerald-400">
+                  {foundCount}/{totalCount}
+                </span>
+                <span className="text-xs text-slate-400 block font-medium">items found</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/customer/map?mission=true')}
+                  className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/30 text-emerald-400 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>Live Map Tour</span>
+                </button>
+                <button
+                  onClick={clearActiveMission}
+                  className="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                  title="Pause or exit this shopping mission"
+                >
+                  Exit Mission
+                </button>
+              </div>
             </div>
           </div>
 

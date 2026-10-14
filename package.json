@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite --host --port 3000",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:hindsight-policy": "node --experimental-strip-types scripts/test-hindsight-cloud-policy.mjs"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
+    "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
@@ -21,15 +23,23 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
+    "@types/qrcode": "^1.5.6",
+    "@types/three": "^0.186.0",
     "@vectorize-io/hindsight-all": "^0.10.1",
     "@vectorize-io/hindsight-client": "^0.10.1",
+    "@zxing/library": "^0.21.3",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
+    "framer-motion": "^14.0.0",
+    "groq-sdk": "^1.6.0",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.48.0",
+    "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4",
     "recharts": "^3.10.1",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "three": "^0.186.1"
   }
 }

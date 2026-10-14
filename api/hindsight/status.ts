@@ -1,6 +1,7 @@
 declare const process: any;
 
 import { hindsightService } from '../../src/services/hindsightService.js';
+import { authenticateManagerRequest } from '../_auth.js';
 import { handleCors, sendJson } from '../_utils.js';
 
 export default async function handler(req: any, res: any) {
@@ -11,19 +12,24 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const isHealthy = await hindsightService.isHealthy();
+    authenticateManagerRequest(req);
+    const status = await hindsightService.checkOperationalStatus();
+    const isHealthy = status.state === 'connected';
     return sendJson(res, 200, {
       success: true,
       isHealthy,
-      baseUrl: (typeof process !== 'undefined' && process.env?.HINDSIGHT_BASE_URL) || 'http://localhost:8888',
+      status,
       storeBank: hindsightService.getStoreBank(),
-      activityCount: hindsightService.getActivityLog().length
+      activityCount: hindsightService.getActivityLog().length,
+      activitySource: 'server-process-local-operation-log',
+      error: isHealthy ? undefined : status.error
     });
   } catch (err: any) {
-    return sendJson(res, 200, {
+    const status = /authentication|manager session/i.test(err?.message || '') ? 403 : 503;
+    return sendJson(res, status, {
       success: false,
       isHealthy: false,
-      error: err?.message || 'Failed to verify Hindsight status'
+      error: hindsightService.safeDiagnosticError(err)
     });
   }
 }

@@ -1,4 +1,5 @@
 import { hindsightService } from '../../src/services/hindsightService.js';
+import { authorizeHindsightBank } from '../_auth.js';
 import { getRequestBody, handleCors, sendJson } from '../_utils.js';
 
 export default async function handler(req: any, res: any) {
@@ -14,10 +15,12 @@ export default async function handler(req: any, res: any) {
     if (!bankId || !query) {
       return sendJson(res, 400, { success: false, error: 'Missing bankId or query' });
     }
+    await authorizeHindsightBank(req, String(bankId));
     const result = await hindsightService.recall(bankId, query, { tags });
     return sendJson(res, 200, result);
   } catch (err: any) {
-    return sendJson(res, 500, {
+    const status = /authentication|authorized|identity|token|expired|revoked|manager session/i.test(err?.message || '') ? 403 : 500;
+    return sendJson(res, status, {
       success: false,
       results: [],
       promptString: '',

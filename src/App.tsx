@@ -4,6 +4,12 @@ import { AppProvider } from './context/AppContext';
 import { Navbar } from './components/Navbar';
 import { DemoTourModal } from './components/DemoTourModal';
 import { SupabaseConfigModal } from './components/SupabaseConfigModal';
+import { CustomerAuthModal } from './components/CustomerAuthModal';
+import { CustomerIdentityQRModal } from './components/CustomerIdentityQRModal';
+import { WhatsAppSimulationDrawer } from './components/WhatsAppSimulationDrawer';
+import { GetStartedModal } from './components/GetStartedModal';
+import { JarvisEmergencyPhoneCallModal } from './components/JarvisEmergencyPhoneCallModal';
+import { useApp } from './context/AppContext';
 
 // Public Pages
 import { LandingPage } from './pages/LandingPage';
@@ -11,7 +17,11 @@ import { InteractionModePage } from './pages/InteractionModePage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { CustomerMobileDashboard } from './pages/CustomerMobileDashboard';
+import { KioskPage } from './pages/KioskPage';
 import { ManagerLoginPage } from './pages/ManagerLoginPage';
+import { ManagerMobileDashboard } from './pages/ManagerMobileDashboard';
+import { EmployeeLoginPage } from './pages/EmployeeLoginPage';
+import { EmployeeDashboardPage } from './pages/EmployeeDashboardPage';
 
 // Customer Pages
 import { CustomerHomePage } from './pages/CustomerHomePage';
@@ -41,12 +51,56 @@ import { StoreMemoryPage } from './pages/StoreMemoryPage';
 
 // Auth Guard
 import { managerService } from './services/managerService';
+import { employeeService } from './services/employeeService';
 
 const ManagerGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (!managerService.isAuthenticated()) {
     return <Navigate to="/manager/login" replace />;
   }
   return <>{children}</>;
+};
+
+const EmployeeGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (!employeeService.isAuthenticated()) {
+    return <Navigate to="/employee/login" replace />;
+  }
+  return <>{children}</>;
+};
+
+const GlobalModalsContainer: React.FC<{
+  supabaseModalOpen: boolean;
+  setSupabaseModalOpen: (o: boolean) => void;
+}> = ({ supabaseModalOpen, setSupabaseModalOpen }) => {
+  const { isGetStartedModalOpen, setIsGetStartedModalOpen, getStartedInitialRole } = useApp();
+
+  return (
+    <>
+      {/* Interactive Guided Tour Modal (Section 39) */}
+      <DemoTourModal />
+
+      {/* Supabase DB Connection Modal */}
+      <SupabaseConfigModal
+        isOpen={supabaseModalOpen}
+        onClose={() => setSupabaseModalOpen(false)}
+      />
+
+      {/* Kiosk Customer Identification & WhatsApp Modal */}
+      <CustomerAuthModal />
+
+      {/* Permanent Customer Identity QR Modal */}
+      <CustomerIdentityQRModal />
+
+      {/* Global Enter Store / Onboarding Portal Modal */}
+      <GetStartedModal
+        isOpen={isGetStartedModalOpen}
+        onClose={() => setIsGetStartedModalOpen(false)}
+        initialRole={getStartedInitialRole}
+      />
+
+      {/* Emergency Automated Phone Call Modal between JARVIS and Manager */}
+      <JarvisEmergencyPhoneCallModal />
+    </>
+  );
 };
 
 export const App: React.FC = () => {
@@ -59,13 +113,10 @@ export const App: React.FC = () => {
           {/* Universal Sticky Navbar */}
           <Navbar onOpenSupabaseModal={() => setSupabaseModalOpen(true)} />
 
-          {/* Interactive Guided Tour Modal (Section 39) */}
-          <DemoTourModal />
-
-          {/* Supabase DB Connection Modal */}
-          <SupabaseConfigModal
-            isOpen={supabaseModalOpen}
-            onClose={() => setSupabaseModalOpen(false)}
+          {/* Global Modals Portal Container */}
+          <GlobalModalsContainer
+            supabaseModalOpen={supabaseModalOpen}
+            setSupabaseModalOpen={setSupabaseModalOpen}
           />
 
           {/* Route Outlet */}
@@ -80,8 +131,32 @@ export const App: React.FC = () => {
               {/* Dedicated Mobile Companion for In-Aisle Guidance */}
               <Route path="/mobile" element={<CustomerMobileDashboard />} />
 
-              {/* Dedicated Store Manager Login (Employee ID + DOB) */}
+              {/* Dedicated Physical Store Kiosk Terminal */}
+              <Route path="/kiosk" element={<KioskPage />} />
+
+              {/* Dedicated Store Manager Login (Employee ID + DOB or Phone) */}
               <Route path="/manager/login" element={<ManagerLoginPage />} />
+
+              {/* Dedicated Store Manager On-The-Go Mobile Portal */}
+              <Route
+                path="/manager/mobile"
+                element={
+                  <ManagerGuard>
+                    <ManagerMobileDashboard />
+                  </ManagerGuard>
+                }
+              />
+
+              {/* Dedicated Employee Mobile Login & Operational Console */}
+              <Route path="/employee/login" element={<EmployeeLoginPage />} />
+              <Route
+                path="/employee/dashboard"
+                element={
+                  <EmployeeGuard>
+                    <EmployeeDashboardPage />
+                  </EmployeeGuard>
+                }
+              />
 
               {/* Customer Routes */}
               <Route path="/customer/home" element={<CustomerHomePage />} />
@@ -94,6 +169,7 @@ export const App: React.FC = () => {
               <Route path="/customer/notifications" element={<NotificationsPage />} />
               <Route path="/customer/cart" element={<CartPage />} />
               <Route path="/customer/checkout" element={<CheckoutPage />} />
+              <Route path="/customer/verify" element={<KioskPage isCustomerEmbedded={true} />} />
               <Route path="/customer/preferences" element={<CustomerPreferencesPage />} />
               <Route path="/customer/memory" element={<CustomerMemoryPage />} />
 

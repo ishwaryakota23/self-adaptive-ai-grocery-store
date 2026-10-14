@@ -11,13 +11,16 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  Star
+  Star,
+  Brain
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { hindsightEngine } from '../services/hindsightEngine';
+import { JarvisCustomerCommandCenter } from '../components/JarvisCustomerCommandCenter';
 
 export const ProductDiscoveryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { products, inventory, addToCart } = useApp();
+  const { products, inventory, addToCart, currentCustomer } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -49,7 +52,7 @@ export const ProductDiscoveryPage: React.FC = () => {
     { id: 'cat-7', name: 'Staples & Oils' },
   ];
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = (products || []).filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.aisle.toLowerCase().includes(searchQuery.toLowerCase());
@@ -57,6 +60,17 @@ export const ProductDiscoveryPage: React.FC = () => {
     const matchesOrganic = !organicOnly || p.is_organic;
     return matchesSearch && matchesCategory && matchesOrganic;
   });
+
+  // Apply behavioral Customer Hindsight to personalize ranking and suppress rejected products
+  const customerId = currentCustomer?.customer_id || '';
+  type AdaptedProduct = ReturnType<typeof hindsightEngine.applyCustomerHindsightToProducts>[number];
+  let adaptedProducts: AdaptedProduct[] = filteredProducts as AdaptedProduct[];
+  try {
+    adaptedProducts = hindsightEngine.applyCustomerHindsightToProducts(customerId, filteredProducts);
+  } catch (err) {
+    console.warn('Customer hindsight adaptation fallback:', err);
+    adaptedProducts = filteredProducts as AdaptedProduct[];
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-white p-4 sm:p-8">
@@ -98,6 +112,11 @@ export const ProductDiscoveryPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Embedded Concentric Holographic JARVIS Voice Command Center */}
+        <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-4 shadow-2xl backdrop-blur-md">
+          <JarvisCustomerCommandCenter />
+        </div>
+
         {/* Category Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           {categories.map((c) => (
@@ -115,9 +134,26 @@ export const ProductDiscoveryPage: React.FC = () => {
           ))}
         </div>
 
+        {/* Empty state when no products match */}
+        {adaptedProducts.length === 0 && (
+          <div className="text-center py-16 bg-slate-900/50 rounded-3xl border border-slate-800 p-8 space-y-3">
+            <ShoppingBag className="w-12 h-12 text-slate-600 mx-auto" />
+            <h3 className="text-lg font-bold text-white">No products found</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              {searchQuery ? `No items match "${searchQuery}".` : 'No items match the selected category filter.'}
+            </p>
+            <button
+              onClick={() => { setSearchQuery(''); setSelectedCategory('all'); setOrganicOnly(false); }}
+              className="mt-2 px-4 py-2 bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs hover:bg-emerald-400 transition-colors cursor-pointer"
+            >
+              Reset Filters & Show All Products
+            </button>
+          </div>
+        )}
+
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredProducts.map((product) => {
+          {adaptedProducts.map((product) => {
             const inv = inventory.find(i => i.product_id === product.id);
             const stock = inv ? inv.quantity : 0;
             const inStock = stock > 0;
@@ -126,7 +162,13 @@ export const ProductDiscoveryPage: React.FC = () => {
               <div
                 key={product.id}
                 data-testid="product-card"
-                className="bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 rounded-2xl overflow-hidden shadow-lg transition-all hover:-translate-y-1 flex flex-col justify-between group"
+                className={`bg-slate-900/90 border ${
+                  product._hindsightTag?.includes('Preferred')
+                    ? 'border-emerald-500/70 shadow-emerald-950/40'
+                    : product._hindsightTag?.includes('Deprioritized')
+                    ? 'border-amber-500/40 opacity-75'
+                    : 'border-slate-800 hover:border-emerald-500/50'
+                } rounded-2xl overflow-hidden shadow-lg transition-all hover:-translate-y-1 flex flex-col justify-between group`}
               >
                 <div
                   onClick={() => navigate(`/customer/products/${product.id}`)}
@@ -148,6 +190,21 @@ export const ProductDiscoveryPage: React.FC = () => {
                       {inStock ? `${stock} left` : 'Out of stock'}
                     </span>
 
+                    {/* Hindsight Adaptive Badge */}
+                    {product._hindsightTag && (
+                      <span
+                        className={`absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-md ${
+                          product._hindsightTag.includes('Preferred')
+                            ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-amber-950/90 text-amber-300 border border-amber-500/40'
+                        }`}
+                        title="Synthetic demo personalization; this badge is not verified from Hindsight Cloud."
+                      >
+                        <Brain className="w-2.5 h-2.5" />
+                        Demo: {product._hindsightTag}
+                      </span>
+                    )}
+
                     <span className="absolute bottom-2 right-2 text-[10px] bg-slate-900/90 text-emerald-400 font-semibold px-2 py-0.5 rounded-lg border border-slate-800 flex items-center gap-1">
                       <MapPin className="w-2.5 h-2.5" />
                       {product.aisle}
@@ -163,6 +220,11 @@ export const ProductDiscoveryPage: React.FC = () => {
                   <p className="text-xs text-slate-400 line-clamp-2 mt-1">
                     {product.description}
                   </p>
+                  {product._hindsightReason && (
+                    <p className="text-[10px] text-amber-300/90 mt-1 line-clamp-1 italic">
+                      Why: {product._hindsightReason}
+                    </p>
+                  )}
                 </div>
 
                 {/* Price & Actions Row */}

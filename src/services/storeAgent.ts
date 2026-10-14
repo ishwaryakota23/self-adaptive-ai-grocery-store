@@ -1,6 +1,8 @@
 import { db } from './db.js';
 import { eventService } from './eventService.js';
 import { storeAgentTools } from './storeAgentTools.js';
+import { employeeService } from './employeeService.js';
+import { hindsightEngine } from './hindsightEngine.js';
 import {
   AIRecommendation,
   CheckoutQueue,
@@ -153,10 +155,45 @@ export class StoreAgent {
   }
 
   /**
-   * Open congested counter
+   * Open congested counter / verification kiosk
    */
   public openCongestedCounter(counterNumber: number) {
     db.updateCounterStatus(counterNumber, 'open');
+  }
+
+  /**
+   * Open verification kiosk per Store Agent recommendation (Section 21 & 22)
+   */
+  public openVerificationKiosk(kioskNumber = 4) {
+    db.updateCounterStatus(kioskNumber, 'open');
+  }
+
+  /**
+   * Summarizes Employee Operations intelligence for Manager Dashboard (Requirement 12)
+   */
+  public getEmployeeOperationsSummary() {
+    return employeeService.getOperationsSummary();
+  }
+
+  /**
+   * Get current restock policy convergence step (1: 30 units, 2: 38 units, 3: 44 units, 4: 42 units)
+   */
+  public getRestockConvergenceStep(): number {
+    return hindsightEngine.getRestockConvergenceStep();
+  }
+
+  /**
+   * Advance restock policy convergence step
+   */
+  public advanceRestockConvergenceStep() {
+    return hindsightEngine.advanceRestockConvergenceStep();
+  }
+
+  /**
+   * Reset restock policy convergence step
+   */
+  public resetRestockConvergenceStep(): void {
+    hindsightEngine.resetRestockConvergenceStep();
   }
 }
 

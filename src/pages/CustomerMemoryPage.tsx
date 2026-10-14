@@ -13,22 +13,57 @@ import {
   Database,
   Layers,
   ArrowLeft,
-  Activity
+  Activity,
+  Brain
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { db } from '../services/db';
 import { eventService } from '../services/eventService';
+import { hindsightEngine } from '../services/hindsightEngine';
+import { AdaptationTrace } from '../components/AdaptationTrace';
 
 export const CustomerMemoryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser } = useApp();
-  const memories = db.getCustomerMemories(currentUser.id);
-  const prefs = db.getCustomerPreferences(currentUser.id);
+  const { currentUser, currentCustomer, setIsCustomerAuthModalOpen } = useApp();
+
+  if (!currentCustomer) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4">
+          <BrainCircuit className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-black text-white">No Customer Identified</h2>
+        <p className="text-sm text-slate-400 mt-2 max-w-md">
+          Customer Hindsight securely retains episodic preferences, past shopping lists, and dietary habits across store visits for identified shoppers.
+        </p>
+        <div className="flex items-center gap-3 mt-6">
+          <button
+            onClick={() => setIsCustomerAuthModalOpen(true)}
+            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm shadow-lg shadow-emerald-500/20 cursor-pointer"
+          >
+            Identify Customer / Check-In
+          </button>
+          <button
+            onClick={() => navigate('/customer/home')}
+            className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm border border-slate-700 cursor-pointer"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const memories = db.getCustomerMemories(currentCustomer.customer_id);
+  const prefs = db.getCustomerPreferences(currentCustomer.customer_id);
   const requests = db.getCustomerRequests();
-  const pastOrders = db.getOrders(currentUser.id);
-  const customerEvents = eventService.getEvents({ customer_session_id: currentUser.id, limit: 8 });
+  const pastOrders = db.getOrders(currentCustomer.customer_id);
+  const customerEvents = eventService.getEvents({ customer_session_id: currentCustomer.customer_id, limit: 8 });
 
   const [activeTab, setActiveTab] = useState<'agent_memory' | 'app_profile'>('agent_memory');
+  const customerTraces = hindsightEngine.getTracesByDomain('CUSTOMER');
+  const [selectedCustTraceId, setSelectedCustTraceId] = useState<string>('CUST_PREF_SOURDOUGH');
+  const activeCustTrace = hindsightEngine.getTraceById(selectedCustTraceId) || customerTraces[0];
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-white p-4 sm:p-8">
@@ -86,10 +121,50 @@ export const CustomerMemoryPage: React.FC = () => {
           /* Agent Episodic Memory */
           <div className="space-y-6">
             <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl text-xs text-slate-400 flex items-center justify-between">
-              <span>Customer Agent Interaction Memory: Structured history of customer events, inquiries, and verified shopping habits.</span>
-              <span className="text-emerald-400 font-mono font-bold text-[11px]">INTERACTION LOG</span>
+              <span>Customer Agent memory examples below are synthetic demonstrations. Verified Cloud memories appear only after an authenticated Hindsight recall.</span>
+              <span className="text-amber-300 font-mono font-bold text-[11px]">DEMO EXAMPLES</span>
             </div>
 
+            {/* Demonstrable Customer Behavioral Adaptation Trace */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                <div className="flex items-center gap-2.5">
+                  <Brain className="w-5 h-5 text-emerald-400" />
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Demonstrable Customer Adaptation</h3>
+                    <p className="text-xs text-slate-400">Live trace proving how customer feedback and choices changed future agent recommendations</p>
+                  </div>
+                </div>
+
+                {/* Scenario switcher */}
+                <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                  {customerTraces.map((trace) => (
+                    <button
+                      key={trace.id}
+                      onClick={() => setSelectedCustTraceId(trace.id)}
+                      className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                        selectedCustTraceId === trace.id
+                          ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {trace.title.split(':')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {activeCustTrace && (
+                <AdaptationTrace
+                  trace={activeCustTrace}
+                  isInteractive={true}
+                />
+              )}
+            </div>
+
+            <div className="pt-2">
+              <h3 className="text-base font-bold text-white mb-3">Episodic Preferences & Memory Bank</h3>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {memories.map((mem) => (
                 <div

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BrainCircuit,
+  Brain,
   Sparkles,
   TrendingDown,
   Clock,
@@ -14,9 +15,14 @@ import {
 import { useApp } from '../context/AppContext';
 import { Sidebar } from '../components/Sidebar';
 import { db } from '../services/db';
+import { hindsightEngine } from '../services/hindsightEngine';
+import { AdaptationTrace } from '../components/AdaptationTrace';
 
 export const StoreMemoryPage: React.FC = () => {
   const storeMemories = db.getStoreMemories();
+  const storeTraces = hindsightEngine.getTracesByDomain('STORE');
+  const [selectedTraceId, setSelectedTraceId] = useState<string>('STORE_RESTOCK_CONVERGENCE');
+  const activeTrace = hindsightEngine.getTraceById(selectedTraceId) || storeTraces[0];
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] bg-slate-950 text-white">
@@ -48,14 +54,57 @@ export const StoreMemoryPage: React.FC = () => {
         <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl flex items-center justify-between text-xs text-slate-400">
           <span>
             <strong className="text-emerald-400">Hindsight Memory Boundary: </strong>
-            Transactional tables (sales, inventory) store operational state. Hindsight preserves cross-week semantic rules learned from operational actions.
+            The scenarios and metrics on this page are synthetic demonstrations. A real stored memory is confirmed only by a successful Hindsight Cloud operation.
           </span>
           <span className="text-purple-400 font-mono font-bold text-[11px] shrink-0 ml-4">
-            EPISODIC GRAPH ACTIVE
+            SYNTHETIC DEMO DATA
           </span>
         </div>
 
+        {/* Dynamic Behavioral Adaptation Trace (Interactive Demonstration) */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+            <div className="flex items-center gap-2.5">
+              <Brain className="w-5 h-5 text-indigo-400" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Demonstrable Store Policy Adaptation</h3>
+                <p className="text-xs text-slate-400">Live trace showing how past stockouts & queues modified agent decision policy</p>
+              </div>
+            </div>
+
+            {/* Scenario selector */}
+            <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+              {storeTraces.map((trace) => (
+                <button
+                  key={trace.id}
+                  onClick={() => setSelectedTraceId(trace.id)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                    selectedTraceId === trace.id
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {trace.title.split(':')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {activeTrace && (
+            <AdaptationTrace
+              trace={activeTrace}
+              isInteractive={true}
+            />
+          )}
+        </div>
+
         {/* Store Memory Cards (Matching Screen 16) */}
+        <div className="space-y-3 pt-4 border-t border-slate-800">
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <span>Historical Episodic Memory Records</span>
+            <span className="text-xs text-slate-500 font-normal">({storeMemories.length} rules retained)</span>
+          </h3>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {storeMemories.map((mem) => (
             <div
@@ -94,7 +143,7 @@ export const StoreMemoryPage: React.FC = () => {
                 <span>Recorded: {mem.recorded_at.split('T')[0]}</span>
                 <span className="text-emerald-400 flex items-center gap-1 font-bold">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Synced in Hindsight
+                  Synthetic example; Cloud retention not verified
                 </span>
               </div>
             </div>

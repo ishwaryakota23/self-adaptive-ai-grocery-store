@@ -81,7 +81,7 @@ export const StoreAgentChat: React.FC = () => {
 
       const response = await fetch('/api/store-agent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(managerService.getAuthToken() ? { Authorization: `Bearer ${managerService.getAuthToken()}` } : {}) },
         body: JSON.stringify({
           input: query,
           managerId: manager?.employee_id || 'EMP-1042',
@@ -124,7 +124,7 @@ export const StoreAgentChat: React.FC = () => {
       try {
         const res = await fetch('/api/store-agent/actions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(managerService.getAuthToken() ? { Authorization: `Bearer ${managerService.getAuthToken()}` } : {}) },
           body: JSON.stringify({
             action: 'approve',
             recommendationId: action.recommendationId,

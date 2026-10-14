@@ -1,4 +1,5 @@
-import { CustomerSession } from '../types/index.js';
+import { CustomerSession, SessionLifecycleStatus } from '../types/index.js';
+import { db } from './db.js';
 
 const WINDOW_SESSION_KEY = 'grocer_window_session_id';
 const GLOBAL_COUNTER_KEY = 'grocer_session_counter';
@@ -39,19 +40,40 @@ class SessionService {
       }
     }
 
-    const defaultId = 'USER00001';
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem(WINDOW_SESSION_KEY, defaultId);
-      } catch (e) {
-        // Ignore in restricted environments
-      }
-    }
-    return defaultId;
+    return '';
   }
 
   public getActiveSessionId(): string {
     return this.activeSessionId;
+  }
+
+  public hasActiveSession(): boolean {
+    return Boolean(this.activeSessionId && this.activeSessionId.trim());
+  }
+
+  public getLifecycleStatus(sessionId = this.activeSessionId): SessionLifecycleStatus {
+    if (!sessionId) return 'SHOPPING';
+    const session = db.getShoppingSession(sessionId);
+    return session?.lifecycle_status || 'SHOPPING';
+  }
+
+  public setLifecycleStatus(status: SessionLifecycleStatus, kioskId?: string, sessionId = this.activeSessionId): void {
+    if (!sessionId) return;
+    db.updateSessionLifecycle(sessionId, status, kioskId);
+    this.notify();
+  }
+
+  public clearActiveSession() {
+    this.activeSessionId = '';
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem(WINDOW_SESSION_KEY);
+        window.dispatchEvent(new Event('grocer_session_changed'));
+      } catch (e) {
+        // ignore
+      }
+    }
+    this.notify();
   }
 
   /**
@@ -75,23 +97,8 @@ class SessionService {
    * Persists the global counter so IDs never collide.
    */
   public createNewSession(deviceType: 'LARGE_DISPLAY' | 'MOBILE' | 'SYNCED' = 'LARGE_DISPLAY'): CustomerSession {
-    let currentCounter = 1;
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(GLOBAL_COUNTER_KEY);
-        if (stored) {
-          currentCounter = Math.max(parseInt(stored, 10), 1) + 1;
-        } else {
-          currentCounter = 2; // USER00001 already seeded
-        }
-        localStorage.setItem(GLOBAL_COUNTER_KEY, currentCounter.toString());
-      } catch (e) {
-        currentCounter = Date.now() % 90000 + 10000;
-      }
-    }
-
-    const padded = currentCounter.toString().padStart(5, '0');
-    const newSessionId = `USER${padded}`;
+    const sequence = Math.floor(Date.now() % 90000) + 10000;
+    const newSessionId = `USER${sequence}`;
     const token = `tok_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     const newSession: CustomerSession = {

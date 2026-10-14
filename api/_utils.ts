@@ -43,7 +43,7 @@ export function sendJson(res: any, statusCode: number, data: any) {
   // Standard Node.js / Connect response (Vite dev server)
   res.statusCode = statusCode;
   if (typeof res.setHeader === 'function') {
-    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
   }
   if (typeof res.end === 'function') {
     res.end(JSON.stringify(data));

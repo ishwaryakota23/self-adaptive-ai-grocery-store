@@ -1,5 +1,6 @@
 import { storeAgentTools } from '../../src/services/storeAgentTools.js';
 import { handleCors, sendJson } from '../_utils.js';
+import { authenticateManagerRequest } from '../_auth.js';
 
 export default async function handler(req: any, res: any) {
   if (handleCors(req, res)) return;
@@ -9,6 +10,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    authenticateManagerRequest(req);
     const overview = storeAgentTools.getStoreOverview();
     return sendJson(res, 200, {
       success: true,

@@ -23,22 +23,19 @@ export const ManagerLoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
     setLoading(true);
 
-    setTimeout(() => {
-      const res = managerService.login(employeeId, dob);
-      setLoading(false);
-
-      if (res.success) {
-        setRole('STORE_MANAGER');
-        navigate('/store/dashboard');
-      } else {
-        setError(res.error || 'Authentication failed. Please verify credentials.');
-      }
-    }, 400);
+    const res = await managerService.loginWithServer(employeeId, dob);
+    setLoading(false);
+    if (res.success) {
+      setRole('STORE_MANAGER');
+      navigate('/store/dashboard');
+    } else {
+      setError(res.error || 'Authentication failed. Please verify credentials.');
+    }
   };
 
   const handleFillCredentials = (empId: string, birthDate: string) => {

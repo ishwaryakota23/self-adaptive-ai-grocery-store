@@ -1,12 +1,21 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, MessageSquare, LayoutGrid, ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { Mic, MessageSquare, LayoutGrid, ArrowLeft, ArrowRight, Check, User, ShieldCheck, QrCode } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { InteractionMode, LanguageCode } from '../types';
 
 export const InteractionModePage: React.FC = () => {
   const navigate = useNavigate();
-  const { interactionMode, setInteractionMode, language, setLanguage, setRole } = useApp();
+  const {
+    interactionMode,
+    setInteractionMode,
+    language,
+    setLanguage,
+    setRole,
+    currentCustomer,
+    setIsCustomerAuthModalOpen,
+    setIsCustomerIdentityQRModalOpen
+  } = useApp();
 
   const handleContinue = () => {
     setRole('CUSTOMER');
@@ -28,15 +37,33 @@ export const InteractionModePage: React.FC = () => {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-white flex flex-col justify-between p-4 sm:p-8">
       <div className="max-w-3xl mx-auto w-full">
-        {/* Back Button */}
-        <div className="mb-6">
+        {/* Top Controls: Back Button & Customer Check-In */}
+        <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back</span>
           </button>
+
+          {/* Customer Identification Status */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsCustomerAuthModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-xs text-white font-medium transition-colors cursor-pointer"
+            >
+              <User className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{currentCustomer ? `Shopper: ${currentCustomer.name}` : 'Check-In Customer'}</span>
+            </button>
+            <button
+              onClick={() => setIsCustomerIdentityQRModalOpen(true)}
+              className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-emerald-400 text-xs transition-colors cursor-pointer"
+              title="View WhatsApp Identity QR"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            </button>
+          </div>
         </div>
 
         {/* Title */}

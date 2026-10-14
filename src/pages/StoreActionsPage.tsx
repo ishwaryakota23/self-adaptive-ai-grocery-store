@@ -135,14 +135,14 @@ export const StoreActionsPage: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-white">4. Outcome Recorded in Memory</h4>
+                      <h4 className="text-sm font-bold text-white">4. Hindsight retention status</h4>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 bg-purple-950/80 px-2.5 py-0.5 rounded-full border border-purple-500/30 flex items-center gap-1">
                         <BrainCircuit className="w-3 h-3" />
-                        Stored in Hindsight
+                        {outcome.is_hindsight_stored ? 'Stored in Hindsight' : outcome.evidence_source === 'synthetic-demo' ? 'Synthetic demo; not retained' : 'Not verified'}
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-1 font-mono">
-                      Policy Key: {outcome.hindsight_id || 'hs-store-mem-8842'} • Synced with Store Agent collective reasoning.
+                      {outcome.hindsight_id ? `Hindsight document: ${outcome.hindsight_id}` : 'No confirmed Hindsight document ID for this outcome.'}
                     </p>
                   </div>
                 </div>

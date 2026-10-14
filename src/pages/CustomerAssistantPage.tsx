@@ -14,14 +14,21 @@ import {
   Sparkles,
   Plus,
   RefreshCw,
-  Bell
+  Bell,
+  Brain,
+  Camera
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { VoiceWaveform } from '../components/VoiceWaveform';
 import { AgentAvatar } from '../components/AgentAvatar';
+import { ProductCameraIdentifier } from '../components/ProductCameraIdentifier';
+import { JarvisCustomerCommandCenter } from '../components/JarvisCustomerCommandCenter';
 import { customerAgent, CustomerAgentResponse } from '../services/customerAgent';
 import { voiceService } from '../services/voiceService';
 import { db } from '../services/db';
+import { hindsightService } from '../services/hindsightService';
+import { hindsightEngine } from '../services/hindsightEngine';
+import { AdaptationTrace } from '../components/AdaptationTrace';
 import { SubstitutionRecord } from '../types/index.js';
 
 interface ProactiveItemContext {
@@ -39,21 +46,28 @@ export const CustomerAssistantPage: React.FC = () => {
   const navigate = useNavigate();
   const {
     currentUser,
+    currentCustomer,
     language,
+    setLanguage,
     activeMission,
     updateMissionItemStatus,
     addToCart,
-    products
+    products,
+    setIsSessionQRModalOpen,
+    setIsCustomerAuthModalOpen
   } = useApp();
 
   const initialMode = searchParams.get('mode') === 'voice' ? 'voice' : 'chat';
   const [mode, setMode] = useState<'voice' | 'chat'>(initialMode);
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [flowStatus, setFlowStatus] = useState<string>('idle');
   const [groqStatus, setGroqStatus] = useState<{ isConfigured: boolean; model?: string }>({ isConfigured: true });
+  const [recalledMemories, setRecalledMemories] = useState<string[]>([]);
+  const [memoryRecallError, setMemoryRecallError] = useState('');
   const [conversation, setConversation] = useState<
     { sender: 'user' | 'agent'; text: string; data?: CustomerAgentResponse }[]
   >([]);
@@ -61,6 +75,8 @@ export const CustomerAssistantPage: React.FC = () => {
   // Proactive check state (dynamic, session & context-aware)
   const [proactiveItem, setProactiveItem] = useState<ProactiveItemContext | null>(null);
   const [showProactiveFoundCheck, setShowProactiveFoundCheck] = useState(false);
+  const [showAdaptationTrace, setShowAdaptationTrace] = useState(false);
+  const [customerTraceId, setCustomerTraceId] = useState<'CUST_PREF_SOURDOUGH' | 'CUST_REJECT_AVOCADO_OIL'>('CUST_PREF_SOURDOUGH');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Check Groq status and subscribe to voice status
@@ -92,9 +108,34 @@ export const CustomerAssistantPage: React.FC = () => {
     return unsubVoice;
   }, []);
 
-  // Initialize with session-aware context (Pasta Night for USER00001 demo, clean personalized greeting for new sessions)
+  // Recall Personalized Customer Hindsight Memories (strictly for identified customers)
   useEffect(() => {
-    const isPastaDemoSession = currentUser.id === 'USER00001' && activeMission?.id === 'mission-pasta-night';
+    if (!currentCustomer) {
+      setRecalledMemories([]);
+      setMemoryRecallError('');
+      return;
+    }
+    const custId = currentCustomer.customer_id;
+    setRecalledMemories([]);
+    setMemoryRecallError('');
+    hindsightService.recall(hindsightService.getCustomerBank(custId), 'preferences diet organic habits')
+      .then(res => {
+        if (res.success && res.results.length > 0) {
+          setRecalledMemories(res.results.map(r => r.text.split('\n')[0]));
+        } else {
+          setRecalledMemories([]);
+          setMemoryRecallError(res.error || 'No verified memories were returned for this customer.');
+        }
+      })
+      .catch((error: any) => {
+        setRecalledMemories([]);
+        setMemoryRecallError(error?.message || 'Hindsight recall is unavailable.');
+      });
+  }, [currentCustomer]);
+
+  // Initialize with session-aware context (Pasta Night only if user explicitly activated that mission)
+  useEffect(() => {
+    const isPastaDemoSession = activeMission?.id === 'mission-pasta-night' && activeMission.status === 'active';
 
     if (isPastaDemoSession) {
       const initResponse: CustomerAgentResponse = {
@@ -181,7 +222,7 @@ export const CustomerAssistantPage: React.FC = () => {
       setProactiveItem(null);
       setShowProactiveFoundCheck(false);
     }
-  }, [language, currentUser.id, activeMission?.id]);
+  }, [language, currentCustomer?.customer_id, activeMission?.id, activeMission?.status]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -211,9 +252,21 @@ export const CustomerAssistantPage: React.FC = () => {
       setTimeout(() => setFlowStatus('generating'), 300);
     }
 
+    // Check for affirmative navigation intents ("Avunu", "Haa", "Yes", "Show me the map")
+    const parsedIntent = voiceService.parseVoiceIntent(text);
+    if (parsedIntent.type === 'NAVIGATION_CONFIRMATION') {
+      setIsSessionQRModalOpen(true);
+    }
+
     // Process with Customer Agent
     try {
-      const res = await customerAgent.processInput(text, language, activeMission, currentUser.id, mode === 'voice' ? 'voice' : 'text');
+      const res = await customerAgent.processInput(
+        text, language, activeMission, currentUser.id, mode === 'voice' ? 'voice' : 'text',
+        currentCustomer ? {
+          customerId: currentCustomer.customer_id,
+          identityToken: db.getActiveCustomerIdentityToken(currentCustomer.customer_id)?.secure_token
+        } : undefined
+      );
 
       setFlowStatus('response_ready');
       setTimeout(() => setFlowStatus('idle'), 2500);
@@ -222,9 +275,13 @@ export const CustomerAssistantPage: React.FC = () => {
         setGroqStatus({ isConfigured: false });
       }
 
-      // Speak response
+      if (res.quickActions?.some(action => action.action === 'open_mobile_qr' || action.action === 'session_handoff')) {
+        setIsSessionQRModalOpen(true);
+      }
+
+      // Speak response with graceful fallback to chat
       setIsSpeaking(true);
-      voiceService.speak(res.message, language, currentUser.id).then(() => {
+      voiceService.speak(res.message, language, currentUser.id).then((ttsRes) => {
         setIsSpeaking(false);
       });
 
@@ -245,6 +302,15 @@ export const CustomerAssistantPage: React.FC = () => {
           reason: `Based on your request for ${prod.name}`
         });
         setShowProactiveFoundCheck(true);
+
+        const actions = res.quickActions ? [...res.quickActions] : [];
+        if (!actions.some(a => a.action === 'navigate_aisle')) {
+          actions.push({ label: `View ${aisle} on Store Map`, action: 'navigate_aisle', route: `/customer/map?product=${prod.id}` });
+        }
+        if (!actions.some(a => a.action === 'open_mobile_qr')) {
+          actions.push({ label: 'Take Navigation on Mobile (QR)', action: 'open_mobile_qr' });
+        }
+        res.quickActions = actions;
       }
 
       setConversation(prev => [...prev, { sender: 'agent', text: res.message, data: res }]);
@@ -268,15 +334,13 @@ export const CustomerAssistantPage: React.FC = () => {
   };
 
   const handleQuickAction = (qa: { label: string; action: string; route?: string }, msgData?: CustomerAgentResponse) => {
+    if (['open_mobile_qr', 'session_handoff', 'switch_to_mobile', 'mobile_handoff'].includes(qa.action)) {
+      setIsSessionQRModalOpen(true);
+      return;
+    }
     if (qa.action === 'accept_substitute' && msgData?.alternatives?.[0]) {
       const altProduct = msgData.alternatives[0];
-      addToCart(altProduct, 1);
-      const subs = db.getSubstitutions();
-      const match = subs.find((s: SubstitutionRecord) => s.customer_session_id === currentUser.id && s.substitute_product_id === altProduct.id && !s.substitute_accepted);
-      if (match) {
-        db.recordSubstitutionAccepted(match.id, currentUser.id);
-      }
-      handleSend(`Accepted substitute: ${altProduct.name}. Added to cart.`);
+      handleSend(`Add ${altProduct.name} to my cart as the substitute.`);
       return;
     }
     if (qa.action === 'reject_substitute') {
@@ -289,10 +353,12 @@ export const CustomerAssistantPage: React.FC = () => {
       return;
     }
     if (qa.action === 'add_to_cart') {
-      const prod = msgData?.productFound || products.find(p => p.id === 'prod-taaza-milk');
+      const requestedName = qa.label.replace(/^add\s+/i, '').replace(/\s+to cart.*$/i, '').trim().toLowerCase();
+      const prod = msgData?.productFound || products.find(p => p.name.toLowerCase().includes(requestedName));
       if (prod) {
-        addToCart(prod, 1);
-        handleSend(`Added ${prod.name} to cart.`);
+        handleSend(`Add ${prod.name} to my cart.`);
+      } else {
+        setConversation(prev => [...prev, { sender: 'agent', text: 'I could not identify the product for that cart action. Please choose it from the catalog.' }]);
       }
       return;
     }
@@ -416,7 +482,7 @@ export const CustomerAssistantPage: React.FC = () => {
           <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setMode('voice')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 mode === 'voice'
                   ? 'bg-emerald-500 text-slate-950 shadow-sm'
                   : 'text-slate-400 hover:text-white'
@@ -427,7 +493,7 @@ export const CustomerAssistantPage: React.FC = () => {
             </button>
             <button
               onClick={() => setMode('chat')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 mode === 'chat'
                   ? 'bg-emerald-500 text-slate-950 shadow-sm'
                   : 'text-slate-400 hover:text-white'
@@ -436,8 +502,48 @@ export const CustomerAssistantPage: React.FC = () => {
               <span>Chat</span>
             </button>
           </div>
+
+          {/* Multilingual Mode Toggle (English & Telugu) */}
+          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setLanguage('en')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                language === 'en'
+                  ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              English
+            </button>
+            <button
+              onClick={() => setLanguage('te')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                language === 'te'
+                  ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              తెలుగు
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Guest Mode Check-In Callout */}
+      {!currentCustomer && (
+        <div className="bg-emerald-950/40 border-b border-emerald-500/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-emerald-200">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Unidentified Shopper: Check in to unlock personalized dietary memory & saved shopping missions.</span>
+          </div>
+          <button
+            onClick={() => setIsCustomerAuthModalOpen(true)}
+            className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition-all cursor-pointer shadow-sm"
+          >
+            Identify Customer
+          </button>
+        </div>
+      )}
 
       {/* Live Agent Lifecycle Status Bar */}
       <div className="bg-slate-900/40 border-b border-slate-800/80 px-4 py-1.5 flex items-center justify-between text-xs">
@@ -506,54 +612,10 @@ export const CustomerAssistantPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Area: Voice Mode (Screen 3) OR Conversation (Screen 4) */}
-      {mode === 'voice' && isListening ? (
-        /* Screen 3: Dedicated Voice Listening Interface */
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto w-full">
-          <h2 className="text-3xl font-extrabold text-white mb-2">I'm listening...</h2>
-          <p className="text-sm text-slate-400 mb-8">
-            {transcript ? `"${transcript}"` : 'Speak naturally, e.g. "I need paneer" or "Pasta ingredients"'}
-          </p>
-
-          {/* Giant Glowing Green Microphone Button (Screen 3) */}
-          <button
-            onClick={toggleVoiceListening}
-            className="w-32 h-32 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center shadow-2xl shadow-emerald-500/40 animate-ring-pulse transform hover:scale-105 transition-all cursor-pointer mb-6"
-          >
-            <Mic className="w-16 h-16 stroke-[2.2]" />
-          </button>
-
-          {/* Animated Waveform */}
-          <VoiceWaveform isListening={true} />
-
-          {/* Example prompt pills (Screen 3) */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-            <button
-              onClick={() => handleSend('I need ingredients for pasta')}
-              className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white hover:border-emerald-500/40 transition-colors"
-            >
-              "I need ingredients for pasta"
-            </button>
-            <button
-              onClick={() => handleSend('Where is paneer?')}
-              className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white hover:border-emerald-500/40 transition-colors"
-            >
-              "Where is paneer?"
-            </button>
-            <button
-              onClick={() => handleSend('Show me offers')}
-              className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white hover:border-emerald-500/40 transition-colors"
-            >
-              "Show me offers"
-            </button>
-          </div>
-
-          <button
-            onClick={() => setIsListening(false)}
-            className="mt-8 px-6 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-900 border border-slate-800"
-          >
-            Cancel
-          </button>
+      {/* Main Area: Voice Mode (JarvisCustomerCommandCenter - Identical to Manager HQ) OR Traditional Chat */}
+      {mode === 'voice' ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 w-full">
+          <JarvisCustomerCommandCenter />
         </div>
       ) : (
         /* Screen 4: Multimodal Conversation Area */
@@ -568,6 +630,78 @@ export const CustomerAssistantPage: React.FC = () => {
               <p className="text-slate-300 leading-relaxed">
                 <code className="text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded font-mono text-[11px]">GROQ_API_KEY</code> is not configured in the backend environment. Groq with <code className="text-emerald-300 bg-slate-900 px-1.5 py-0.5 rounded font-mono text-[11px]">{groqStatus.model || 'qwen/qwen3.8-27b'}</code> is the designated reasoning engine for GrocerAI. To enable live multimodal reasoning, add <code className="text-amber-300 font-mono text-[11px]">GROQ_API_KEY=your_key_here</code> to your <code className="font-mono text-[11px]">.env</code> file in the project root. GrocerAI will not fake AI responses.
               </p>
+            </div>
+          )}
+
+          {/* GrocerAI Remembers... / Personalized Shopping Memory */}
+          <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl p-4 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-xs text-white flex items-center gap-2">
+                  GrocerAI Remembers ({currentUser.name || 'Shopper'})
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  {recalledMemories.length ? 'Verified Hindsight recall' : 'No verified Cloud memory'}
+                  </span>
+                </span>
+                <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                  {recalledMemories[0] || memoryRecallError || 'No verified saved preference was returned for this customer.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAdaptationTrace(!showAdaptationTrace)}
+                className="text-[11px] font-bold text-emerald-300 bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/40 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Brain className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{showAdaptationTrace ? 'Hide Adaptation Trace' : 'View Adaptation Trace'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Customer Adaptation Trace Expander */}
+          {showAdaptationTrace && (
+            <div className="space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-2.5 rounded-2xl text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 font-medium">Synthetic customer demo scenario:</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setCustomerTraceId('CUST_PREF_SOURDOUGH')}
+                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                        customerTraceId === 'CUST_PREF_SOURDOUGH'
+                          ? 'bg-emerald-500 text-slate-950'
+                          : 'bg-slate-950 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Artisan Sourdough Preference
+                    </button>
+                    <button
+                      onClick={() => setCustomerTraceId('CUST_REJECT_AVOCADO_OIL')}
+                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                        customerTraceId === 'CUST_REJECT_AVOCADO_OIL'
+                          ? 'bg-emerald-500 text-slate-950'
+                          : 'bg-slate-950 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Negative Feedback: Avocado Oil (3x Rejection)
+                    </button>
+                  </div>
+                </div>
+                <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/20">
+                  Adaptive Policy Active
+                </span>
+              </div>
+
+              {hindsightEngine.getTraceById(customerTraceId) && (
+                <AdaptationTrace
+                  trace={hindsightEngine.getTraceById(customerTraceId)!}
+                  isInteractive={true}
+                />
+              )}
             </div>
           )}
 
@@ -780,6 +914,15 @@ export const CustomerAssistantPage: React.FC = () => {
             <Mic className="w-5 h-5 stroke-[2.2]" />
           </button>
 
+          {/* Assistive Camera Product Identification Button */}
+          <button
+            onClick={() => setCameraOpen(true)}
+            className="p-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 transition-all shadow-md cursor-pointer"
+            title="Identify shelf product with camera"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
+
           {/* Text Input */}
           <input
             type="text"
@@ -804,6 +947,13 @@ export const CustomerAssistantPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Assistive Camera Product Identifier Modal */}
+      <ProductCameraIdentifier
+        isOpen={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onAddToCart={(p) => addToCart(p)}
+      />
     </div>
   );
 };

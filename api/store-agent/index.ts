@@ -1,4 +1,5 @@
 import { groqStoreAgentServer } from '../../src/server/groqStoreAgent.js';
+import { authenticateManagerRequest } from '../_auth.js';
 import { getRequestBody, handleCors, sendJson } from '../_utils.js';
 
 export default async function handler(req: any, res: any) {
@@ -9,8 +10,9 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    const manager = authenticateManagerRequest(req);
     const payload = await getRequestBody(req);
-    const agentResponse = await groqStoreAgentServer.processRequest(payload);
+    const agentResponse = await groqStoreAgentServer.processRequest({ ...payload, managerId: manager.sub, managerName: manager.name });
     return sendJson(res, 200, agentResponse);
   } catch (err: any) {
     return sendJson(res, 500, {

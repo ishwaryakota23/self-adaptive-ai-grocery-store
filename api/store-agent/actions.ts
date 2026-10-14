@@ -1,4 +1,5 @@
 import { storeAgentTools } from '../../src/services/storeAgentTools.js';
+import { authenticateManagerRequest } from '../_auth.js';
 import { getRequestBody, handleCors, sendJson } from '../_utils.js';
 
 export default async function handler(req: any, res: any) {
@@ -9,8 +10,10 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    const manager = authenticateManagerRequest(req);
     const payload = await getRequestBody(req);
-    const { action, recommendationId, modifications, reason, managerName } = payload;
+    const { action, recommendationId, modifications, reason } = payload;
+    const managerName = manager.name;
     let result: any;
 
     if (action === 'approve') {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import {
   Smartphone,
+  Navigation,
   Compass,
   CheckCircle2,
   Circle,
@@ -19,31 +20,160 @@ import {
   ChevronRight,
   ShieldCheck,
   Mic,
-  MicOff
+  MicOff,
+  Camera,
+  QrCode,
+  X
 } from 'lucide-react';
-import { db } from '../services/db';
-import { sessionService } from '../services/sessionService';
-import { customerAgent } from '../services/customerAgent';
-import { voiceService } from '../services/voiceService';
-import { languageDetector } from '../services/languageDetector';
-import { ShoppingMission, ShoppingMissionItem, CartItem, NotificationItem } from '../types';
+import { db } from '../services/db.js';
+import { sessionService } from '../services/sessionService.js';
+import { sessionSyncService, SharedCartSnapshot } from '../services/sessionSyncService.js';
+import { parseMobileHandoffParams } from '../services/sessionHandoffUrl.js';
+import { customerAgent, getCustomerAgentIdentity } from '../services/customerAgent.js';
+import { voiceService } from '../services/voiceService.js';
+import { languageDetector } from '../services/languageDetector.js';
+import { hindsightService } from '../services/hindsightService.js';
+import { ProductCameraIdentifier } from '../components/ProductCameraIdentifier.js';
+import { CustomerJarvisVoiceOrb } from '../components/CustomerJarvisVoiceOrb.js';
+import { qrService } from '../services/qrService.js';
+import { ShoppingMission, ShoppingMissionItem, CartItem, NotificationItem, Product } from '../types/index.js';
 
 export const CustomerMobileDashboard: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const handoffParams = parseMobileHandoffParams(searchParams);
   const querySession = searchParams.get('session');
+  const sessionToken = handoffParams.token;
+  const querySessionId = searchParams.get('session_id');
+
+  const navigate = useNavigate();
+  const [handoffError, setHandoffError] = useState<string | null>(null);
+  const consumedTokenRef = useRef<string | null>(null);
+  const sharedRevisionRef = useRef<number | null>(null);
+  const sharedCartSignatureRef = useRef<string>('');
+  const sharedSavePendingRef = useRef(false);
+  const [sharedRevision, setSharedRevision] = useState<number | null>(null);
+  const [sharedSyncError, setSharedSyncError] = useState<string | null>(null);
 
   const [sessionId, setSessionId] = useState<string>(() => {
-    if (querySession && querySession.startsWith('USER')) {
-      sessionService.setActiveSession(querySession);
-      return querySession;
-    }
+    if (sessionToken) return '';
+    // URL session IDs are hints only. A kiosk-to-phone visit requires a
+    // server-issued handoff token; never trust a bare session query parameter.
+    if (querySession || querySessionId) return '';
     return sessionService.getActiveSessionId();
   });
+  const [activeSessionToken, setActiveSessionToken] = useState<string | null>(sessionToken);
+
+  useEffect(() => {
+    const hintedSessionId = handoffParams.sessionIdHint;
+    if (handoffParams.tokenMissing) {
+      setHandoffError('This link has no secure handoff token. Return to the kiosk and scan a fresh session QR.');
+      return;
+    }
+    if (sessionToken && consumedTokenRef.current !== sessionToken) {
+      consumedTokenRef.current = sessionToken;
+      setActiveSessionToken(sessionToken);
+      setHandoffError(null);
+      void sessionSyncService.load(sessionToken, hintedSessionId || undefined).then(shared => {
+        if (!shared.customer || shared.session.session_id !== (hintedSessionId || shared.session.session_id)) throw new Error('The session pass does not match the active customer session.');
+        db.importRemoteShoppingSession(shared.session as any, shared.customer);
+        const items = db.replaceCartFromServer(shared.session.session_id, shared.cart.items);
+        sessionService.setActiveSession(shared.session.session_id);
+        setSessionId(shared.session.session_id);
+        setActiveSessionToken(shared.syncToken || sessionToken);
+        setMission(db.getActiveMission(shared.session.session_id));
+        setCart(items);
+        setNotifications(db.getNotifications(shared.session.session_id));
+        sharedRevisionRef.current = shared.cart.revision;
+        setSharedRevision(shared.cart.revision);
+        sharedCartSignatureRef.current = JSON.stringify(shared.cart.items.map(i => [i.product_id, i.quantity]));
+        setHandoffError(null);
+      }).catch(error => {
+        setHandoffError(error?.message || 'Invalid or expired session pass.');
+      });
+    }
+  }, [sessionToken, querySessionId, querySession, handoffParams.sessionIdHint, handoffParams.tokenMissing]);
 
   const [mission, setMission] = useState<ShoppingMission | undefined>(() => db.getActiveMission(sessionId));
   const [cart, setCart] = useState<CartItem[]>(() => db.getCart(sessionId));
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => db.getNotifications(sessionId));
   const [deviceFrame, setDeviceFrame] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [activeScannedProduct, setActiveScannedProduct] = useState<Product | null>(null);
+  const [recalledMemories, setRecalledMemories] = useState<string[]>([]);
+  const [showCheckoutPass, setShowCheckoutPass] = useState(false);
+  const [sessionQrUrl, setSessionQrUrl] = useState<string | null>(null);
+  const [checkoutQrError, setCheckoutQrError] = useState<string | null>(null);
+  const [checkoutQrAttempt, setCheckoutQrAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!showCheckoutPass || !sessionId) return;
+    let cancelled = false;
+    setSessionQrUrl(null);
+    setCheckoutQrError(null);
+    if (!activeSessionToken) {
+      setCheckoutQrError('This mobile session has no secure handoff token. Reopen it by scanning the session QR from the kiosk.');
+      return () => { cancelled = true; };
+    }
+
+    try {
+      // The signed handoff token already authorizes the kiosk lookup. Build its URL
+      // locally so a transient session-sync read cannot leave the QR spinner stuck.
+      const kioskUrl = new URL('/kiosk', window.location.origin);
+      kioskUrl.searchParams.set('handoff', activeSessionToken);
+      kioskUrl.searchParams.set('action', 'verify');
+      const rawKioskUrl = kioskUrl.toString();
+      void qrService.generateSessionQR({
+        handoff_id: activeSessionToken, session_id: sessionId,
+        customer_id: '', secure_token: activeSessionToken,
+        qr_payload: rawKioskUrl, status: 'active', created_at: new Date().toISOString(), expires_at: ''
+      } as any).then(qr => {
+        if (!cancelled) setSessionQrUrl(qr.dataUrl);
+      }).catch(error => {
+        if (!cancelled) setCheckoutQrError(error?.message || 'Could not render the kiosk session QR. Please retry.');
+      });
+    } catch (error: any) {
+      setCheckoutQrError(error?.message || 'Could not create the kiosk session QR. Please retry.');
+    }
+    return () => { cancelled = true; };
+  }, [showCheckoutPass, sessionId, activeSessionToken, checkoutQrAttempt]);
+
+  const handleProductIdentifiedFromCamera = async (product: Product) => {
+    setActiveScannedProduct(product);
+    // Explicit camera assistive identification: Customer Agent explains product & availability
+    const query = `What is ${product.name}? Tell me its shelf location, price, and if it is an approved substitute for my mission.`;
+    const preferredLang = languageDetector.getPreferredLanguage(sessionId);
+    try {
+      const response = await customerAgent.processInput(query, preferredLang, mission, sessionId, 'voice', getCustomerAgentIdentity(sessionId));
+      const agentMsg = {
+        sender: 'agent' as const,
+        text: response.message,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        aisleHint: response.productFound?.shelf_location || response.aisle,
+        data: response
+      };
+      setMessages((prev) => [...prev, agentMsg]);
+      if (voicePlayback) {
+        const langToSpeak = (response.response_language as any) || preferredLang || 'en';
+        voiceService.speak(response.message, langToSpeak, sessionId);
+      }
+    } catch (e) {
+      console.warn('Error processing camera product with Customer Agent:', e);
+    }
+  };
+
+  // Recall the bank belonging to the session customer; the API validates their identity.
+  useEffect(() => {
+    let active = true;
+    const session = db.getShoppingSession(sessionId);
+    const custId = session?.customer_id || '';
+    setRecalledMemories([]);
+    if (custId) {
+      hindsightService.recallCustomerMemories(custId, 'preferences diet organic habits')
+        .then(res => { if (active) setRecalledMemories(res.success ? res.results.map(item => item.text.split('\n')[0]) : []); })
+        .catch(() => { if (active) setRecalledMemories([]); });
+    }
+    return () => { active = false; };
+  }, [sessionId]);
 
   // Chat state
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'agent'; text: string; time: string; aisleHint?: string; data?: any }>>([
@@ -69,6 +199,61 @@ export const CustomerMobileDashboard: React.FC = () => {
     return unsub;
   }, [sessionId]);
 
+  // Pull changes from the shared revisioned snapshot; no browser-local broadcast is required.
+  useEffect(() => {
+    if (!activeSessionToken || !sessionId) return;
+    let cancelled = false;
+    let inFlight = false;
+    const pull = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const shared = await sessionSyncService.load(activeSessionToken);
+        if (cancelled || shared.session.session_id !== sessionId || shared.cart.revision === sharedRevisionRef.current) return;
+        sharedRevisionRef.current = shared.cart.revision;
+        setSharedRevision(shared.cart.revision);
+        sharedCartSignatureRef.current = JSON.stringify(shared.cart.items.map(i => [i.product_id, i.quantity]));
+        const next = db.replaceCartFromServer(sessionId, shared.cart.items);
+        setCart(next);
+        setSharedSyncError(null);
+      } catch (error: any) {
+        if (!cancelled) setSharedSyncError(error?.message || 'Shared cart could not be refreshed.');
+      } finally { inFlight = false; }
+    };
+    void pull();
+    const timer = window.setInterval(() => void pull(), 2500);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [activeSessionToken, sessionId]);
+
+  // Persist cart edits with optimistic revision checks to avoid overwriting concurrent device updates.
+  useEffect(() => {
+    if (!activeSessionToken || !sessionId || sharedRevisionRef.current === null) return;
+    const signature = JSON.stringify(cart.map(i => [i.product_id, i.quantity]));
+    if (signature === sharedCartSignatureRef.current || sharedSavePendingRef.current) return;
+    const timer = window.setTimeout(async () => {
+      sharedSavePendingRef.current = true;
+      try {
+        const result: any = await sessionSyncService.saveCart(activeSessionToken, sharedRevisionRef.current!, db.getCart(sessionId));
+        if (!result.success && result.conflict && result.cart) {
+          sharedRevisionRef.current = result.cart.revision;
+          setSharedRevision(result.cart.revision);
+          sharedCartSignatureRef.current = JSON.stringify(result.cart.items.map((i: any) => [i.product_id, i.quantity]));
+          const latest = db.replaceCartFromServer(sessionId, result.cart.items);
+          setCart(latest);
+          setSharedSyncError('The cart changed on another device. The latest shared cart is shown; retry your change.');
+        } else {
+          sharedRevisionRef.current = result.cart.revision;
+          setSharedRevision(result.cart.revision);
+          sharedCartSignatureRef.current = JSON.stringify(result.cart.items.map((i: any) => [i.product_id, i.quantity]));
+          setSharedSyncError(null);
+        }
+      } catch (error: any) {
+        setSharedSyncError(error?.message || 'Cart changes could not be saved to the shared backend.');
+      } finally { sharedSavePendingRef.current = false; }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [cart, activeSessionToken, sessionId, sharedRevision]);
+
   // Handle session updates from service
   useEffect(() => {
     const unsubSession = sessionService.subscribe((s) => {
@@ -93,13 +278,7 @@ export const CustomerMobileDashboard: React.FC = () => {
   const handleMobileQuickAction = (qa: { label: string; action: string; route?: string }, data?: any) => {
     if (qa.action === 'accept_substitute' && data?.alternatives?.[0]) {
       const altProduct = data.alternatives[0];
-      db.addToCart(altProduct, 1, sessionId, 'MOBILE');
-      const subs = db.getSubstitutions();
-      const match = subs.find(s => s.customer_session_id === sessionId && s.substitute_product_id === altProduct.id && !s.substitute_accepted);
-      if (match) {
-        db.recordSubstitutionAccepted(match.id, sessionId);
-      }
-      handleSendMessage(`Accepted substitute: ${altProduct.name}. Added to cart.`);
+      handleSendMessage(`Add ${altProduct.name} to my cart as the substitute.`);
       return;
     }
     if (qa.action === 'reject_substitute') {
@@ -112,10 +291,11 @@ export const CustomerMobileDashboard: React.FC = () => {
       return;
     }
     if (qa.action === 'add_to_cart') {
-      const prod = data?.productFound || db.getProductById('prod-taaza-milk');
+      const prod = data?.productFound;
       if (prod) {
-        db.addToCart(prod, 1, sessionId, 'MOBILE');
-        handleSendMessage(`Added ${prod.name} to cart.`);
+        handleSendMessage(`Add ${prod.name} to my cart.`);
+      } else {
+        setMessages(prev => [...prev, { sender: 'agent', text: 'Please choose a specific product from the catalog before I add it.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
       }
       return;
     }
@@ -140,10 +320,26 @@ export const CustomerMobileDashboard: React.FC = () => {
         (err) => {
           console.warn('Mobile voice recognition error:', err);
           setIsListening(false);
+          setMessages((prev) => [
+            ...prev,
+            {
+              sender: 'agent',
+              text: 'Microphone permission blocked by browser. You can type your shopping question directly into the text box below!',
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
         }
       );
       if (!started) {
         setIsListening(false);
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: 'agent',
+            text: 'Microphone speech recognition requires HTTPS or localhost. You can type your shopping question directly in the text box below, or open companion in a localhost tab!',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
       }
     }
   };
@@ -163,7 +359,7 @@ export const CustomerMobileDashboard: React.FC = () => {
 
     try {
       const preferredLang = languageDetector.getPreferredLanguage(sessionId);
-      const response = await customerAgent.processInput(query, preferredLang, mission, sessionId, inputMode);
+      const response = await customerAgent.processInput(query, preferredLang, mission, sessionId, inputMode, getCustomerAgentIdentity(sessionId));
       const agentMsg = {
         sender: 'agent' as const,
         text: response.message,
@@ -173,6 +369,8 @@ export const CustomerMobileDashboard: React.FC = () => {
       };
       setMessages((prev) => [...prev, agentMsg]);
       setIsAgentThinking(false);
+
+      setCart(db.getCart(sessionId));
 
       if (voicePlayback) {
         const langToSpeak = (response.response_language as any) || preferredLang || 'en';
@@ -198,6 +396,11 @@ export const CustomerMobileDashboard: React.FC = () => {
 
   const content = (
     <div className="flex flex-col min-h-screen bg-slate-950 text-white selection:bg-emerald-500 selection:text-slate-950">
+      {(sharedSyncError || sharedRevision !== null) && (
+        <div role={sharedSyncError ? 'alert' : 'status'} className={`px-4 py-2 text-[11px] ${sharedSyncError ? 'bg-rose-950/60 text-rose-200 border-b border-rose-700' : 'bg-slate-900 text-slate-400 border-b border-slate-800'}`}>
+          {sharedSyncError || `Shared cart connected · revision ${sharedRevision} · refreshes about every 2.5 seconds`}
+        </div>
+      )}
       {/* Mobile Top Bar */}
       <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2.5">
@@ -231,6 +434,15 @@ export const CustomerMobileDashboard: React.FC = () => {
             {voicePlayback ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
 
+          {/* Camera Product Identifier */}
+          <button
+            onClick={() => setCameraOpen(true)}
+            className="p-1.5 rounded-lg border bg-slate-800 border-slate-700 text-emerald-400 hover:text-white transition-colors cursor-pointer"
+            title="Identify Product with Camera"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
+
           {/* Sync indicator */}
           <div className="flex items-center gap-1 bg-slate-800 border border-slate-700 px-2 py-1 rounded-lg text-[10px] text-emerald-400 font-semibold">
             <RefreshCw className="w-3 h-3 animate-spin-slow" />
@@ -248,9 +460,18 @@ export const CustomerMobileDashboard: React.FC = () => {
               <Compass className="w-4 h-4 text-emerald-400" />
               <h2 className="font-bold text-sm text-white">Active Shopping Mission</h2>
             </div>
-            <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-              {foundMissionItems}/{totalMissionItems} Found ({progressPercent}%)
-            </span>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/customer/map?mission=true"
+                className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-500/30 transition-colors"
+              >
+                <Navigation className="w-3 h-3" />
+                <span>Map Tour</span>
+              </Link>
+              <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                {foundMissionItems}/{totalMissionItems} Found ({progressPercent}%)
+              </span>
+            </div>
           </div>
 
           {/* Progress Bar */}
@@ -300,15 +521,26 @@ export const CustomerMobileDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${
-                      isFound
-                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-slate-800 text-slate-300'
-                    }`}
-                  >
-                    {isFound ? 'Found' : 'Find in Aisle'}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                        isFound
+                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-slate-800 text-slate-300'
+                      }`}
+                    >
+                      {isFound ? 'Found' : 'Pending'}
+                    </span>
+                    {!isFound && (
+                      <Link
+                        to={`/customer/map?product=${item.product_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold transition-colors"
+                      >
+                        Route
+                      </Link>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -323,24 +555,28 @@ export const CustomerMobileDashboard: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold block">Aisle 4 Notice (Dairy)</span>
-                <span>
-                  Amul Fresh Paneer 200g is currently out of stock. Suggested substitute:{' '}
-                  <strong className="text-white">Milky Mist Paneer (Aisle 4, Shelf B3)</strong>.
-                </span>
+            {notifications.length > 0 ? (
+              notifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 text-xs flex items-start gap-2.5"
+                >
+                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">{notif.title}</span>
+                    <span>{notif.message}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 text-xs flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">Aisle 1 Fresh Arrival</span>
+                  <span>Farm-fresh produce restocked this morning in Produce Bins.</span>
+                </div>
               </div>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 text-xs flex items-start gap-2.5">
-              <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold block">Aisle 1 Fresh Arrival</span>
-                <span>Vine-ripened organic tomatoes restocked this morning in Bin 4.</span>
-              </div>
-            </div>
+            )}
           </div>
         </section>
 
@@ -450,7 +686,7 @@ export const CustomerMobileDashboard: React.FC = () => {
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder={isListening ? "Listening..." : "Ask for aisle or item..."}
+              placeholder={isListening ? "Listening..." : "Say 'Hey JARVIS' or ask for item..."}
               className="flex-1 bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none transition-colors"
             />
             <button
@@ -496,20 +732,149 @@ export const CustomerMobileDashboard: React.FC = () => {
             )}
           </div>
 
-          <div className="pt-2 text-[11px] text-slate-400 flex items-center justify-between">
-            <span>Pay at Smart Kiosk or Counter 1-4</span>
-            <span className="text-emerald-400 font-semibold flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" />
-              <span>Auto-synced</span>
-            </span>
+          <div className="pt-3 border-t border-slate-800/80 flex flex-col gap-2">
+            <button
+              onClick={() => setShowCheckoutPass(true)}
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 cursor-pointer active:scale-95"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>Checkout →</span>
+            </button>
+
+            <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+              <div className="flex items-center justify-between text-slate-300">
+                <span>Exit Station: Kiosks 1–4</span>
+                <span className="text-emerald-400 font-semibold flex items-center gap-1 font-mono">
+                  Session: {sessionId}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                Your shopping cart is ready. Please proceed to the nearest GrocerAI kiosk to verify your items and continue to checkout. Scan this session pass at the kiosk.
+              </p>
+            </div>
           </div>
         </section>
       </main>
+
+      <ProductCameraIdentifier
+        isOpen={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onProductIdentified={handleProductIdentifiedFromCamera}
+      />
+
+      {/* Checkout Exit Pass Modal */}
+      {showCheckoutPass && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 max-w-sm w-full text-center space-y-5 shadow-2xl animate-fade-in relative">
+            <button
+              onClick={() => setShowCheckoutPass(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-white">Exit Verification Pass</h2>
+              <div className="mt-2 p-3 rounded-2xl bg-emerald-950/50 border border-emerald-500/30 text-emerald-200">
+                <p className="text-xs font-semibold leading-relaxed">
+                  Navigate to the kiosk for product verification and payment
+                </p>
+              </div>
+            </div>
+
+            {/* QR Code Container */}
+            <div className="bg-white p-3 rounded-2xl shadow-inner mx-auto w-56 h-56 flex items-center justify-center border-4 border-emerald-500/20">
+              {sessionQrUrl ? (
+                <img
+                  src={sessionQrUrl}
+                  alt="Customer Session QR Code"
+                  className="w-full h-full object-contain"
+                />
+              ) : checkoutQrError ? (
+                <div className="flex flex-col items-center justify-center gap-3 px-4 text-center text-rose-700">
+                  <span className="text-xs font-semibold">{checkoutQrError}</span>
+                  <button onClick={() => setCheckoutQrAttempt(attempt => attempt + 1)} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white">Retry QR</button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-600 gap-2">
+                  <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+                  <span className="text-xs font-semibold">Generating QR Pass...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Session Info */}
+            <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-xs space-y-1.5">
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Session ID:</span>
+                <span className="font-mono text-emerald-400 font-bold">{sessionId}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Cart Total ({cart.length} items):</span>
+                <span className="font-mono text-white font-bold text-sm">₹{cartTotal}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <Link
+                to={`/customer/verify?session=${sessionId}`}
+                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+              >
+                <span>Direct Kiosk Verification Screen</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <button
+                onClick={() => setShowCheckoutPass(false)}
+                className="w-full py-2 rounded-xl text-slate-400 hover:text-white text-xs transition-colors"
+              >
+                Back to Shopping
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Mobile JARVIS Voice Interface Companion Orb */}
+      <CustomerJarvisVoiceOrb
+        sessionId={sessionId}
+        mission={mission}
+        onOpenProductCamera={() => setCameraOpen(true)}
+        onMessageAdded={(msg) => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              sender: msg.sender,
+              text: msg.text,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              aisleHint: msg.aisleHint,
+              data: msg.data
+            }
+          ]);
+        }}
+        activeScannedProduct={activeScannedProduct}
+        onNavigateToRoute={(route) => navigate(route)}
+        voiceAudioEnabled={voicePlayback}
+        onToggleVoiceAudio={() => setVoicePlayback(!voicePlayback)}
+      />
     </div>
   );
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-2 sm:p-6">
+    {(sessionToken || querySession || querySessionId) && !sessionId && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-5">
+          <div className="max-w-md w-full rounded-3xl border border-slate-700 bg-slate-900 p-7 text-center space-y-4">
+            {handoffError ? <AlertCircle className="w-10 h-10 mx-auto text-rose-400" /> : <RefreshCw className="w-10 h-10 mx-auto text-emerald-400 animate-spin" />}
+            <h1 className="text-xl font-bold text-white">{handoffError ? 'Could not load this shopping session' : 'Loading your shared shopping session…'}</h1>
+            <p className="text-sm text-slate-300">{handoffError || 'Connecting to the secure shared cart. No new cart will be created.'}</p>
+            {handoffError && <button onClick={() => window.location.assign('/kiosk')} className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm">Return to kiosk and scan a fresh QR</button>}
+          </div>
+        </div>
+      )}
       {/* Viewport switch toolbar for desktop testing */}
       <div className="mb-4 flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl text-xs">
         <span className="text-slate-400">Display Simulation:</span>

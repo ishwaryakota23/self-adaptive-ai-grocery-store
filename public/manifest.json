@@ -1,0 +1,20 @@
+{
+  "name": "GrocerAI Manager Sentinel",
+  "short_name": "Manager AI",
+  "description": "On-The-Go Store Management and Automated JARVIS Telephony for GrocerAI Supermarket Branch #104",
+  "start_url": "/manager/mobile",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -73,3 +73,75 @@ coverage/
 .DS_Store
 Thumbs.db
 ehthumbs.db
+
+# Local browser profiles and temporary files
+.chrome_profile_*/
+scratch/
+scratch_extract.py
+.code-ae/
+.code-in/
+.agents/
+
+# Test data and generated test artifacts
+test.mp4
+test.webp
+**/test-results/
+**/playwright-report/
+**/coverage/
+**/__screenshots__/
+**/test-output/
+**/test-data/
+**/fixtures/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+
+# Local demo video
+GrocerAI_Final_Demo_1080p.mp4
+
+
+# Local browser profiles
+.chrome_profile_*/
+.code-ae/
+.code-in/
+
+# Temporary local files
+scratch/
+scratch_extract.py
+
+# Test data and generated test outputs
+**/test-data/
+**/test-results/
+**/test-output/
+**/playwright-report/
+**/coverage/
+__pycache__/
+*.pyc
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Exclude demo video, but recordings are allowed
+GrocerAI_Final_Demo_1080p.mp4
+
+
+# Never push test files
+src/tests/
+
+
+# Exclude all test files
+/src/tests/
+
+
+# Test-only data
+/api/hindsight/test-bank.ts
+
+
+# Test-only data
+/api/hindsight/test-bank.ts
+

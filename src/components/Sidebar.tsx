@@ -3,36 +3,38 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Boxes,
-  MessageSquareQuote,
-  TrendingDown,
-  BarChart3,
-  Footprints,
-  Clock,
+  ShieldAlert,
+  Camera,
+  BrainCircuit,
+  Calculator,
+  Users,
+  Activity,
   Sparkles,
   GitCommit,
-  BrainCircuit,
   Store
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { db } from '../services/db';
 
 export const Sidebar: React.FC = () => {
   const { aiRecommendations, checkoutQueues, inventory } = useApp();
 
   const pendingRecs = aiRecommendations.filter(r => r.status === 'pending').length;
-  const congestedQueues = checkoutQueues.filter(q => q.status === 'congested').length;
+  const congestedQueues = checkoutQueues.filter(q => q.status === 'congested' || q.estimated_wait_mins > 3.0).length;
   const stockouts = inventory.filter(i => i.quantity === 0).length;
+  const openSecurity = db.getSecurityEvents().filter(e => e.status !== 'RESOLVED' && (e.severity === 'high' || e.severity === 'critical')).length;
 
   const links = [
-    { to: '/store/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/store/inventory', label: 'Inventory', icon: Boxes, badge: stockouts > 0 ? `${stockouts} out` : undefined, badgeColor: 'bg-rose-500' },
-    { to: '/store/requests', label: 'Customer Requests', icon: MessageSquareQuote },
-    { to: '/store/demand', label: 'Unmet Demand', icon: TrendingDown, badge: 'High', badgeColor: 'bg-amber-500' },
-    { to: '/store/sales', label: 'Sales Analytics', icon: BarChart3 },
-    { to: '/store/traffic', label: 'Aisle Traffic', icon: Footprints },
-    { to: '/store/queues', label: 'Checkout Queues', icon: Clock, badge: congestedQueues > 0 ? 'Alert' : undefined, badgeColor: 'bg-rose-500' },
+    { to: '/store/dashboard', label: 'Command Center', icon: LayoutDashboard },
+    { to: '/store/dashboard?tab=operations', label: 'Operations', icon: Activity, badge: congestedQueues > 0 ? 'Queue SLA' : undefined, badgeColor: 'bg-amber-500' },
+    { to: '/store/dashboard?tab=inventory', label: 'Inventory', icon: Boxes, badge: stockouts > 0 ? `${stockouts} out` : undefined, badgeColor: 'bg-rose-500' },
+    { to: '/store/dashboard?tab=security', label: 'Security', icon: ShieldAlert, badge: openSecurity > 0 ? `${openSecurity} Alert` : undefined, badgeColor: 'bg-rose-500' },
+    { to: '/store/dashboard?tab=cctv', label: 'CCTV Surveillance', icon: Camera, badge: '5 Cams', badgeColor: 'bg-cyan-600' },
+    { to: '/store/dashboard?tab=hindsight', label: 'Hindsight Memory', icon: BrainCircuit, badge: 'Active', badgeColor: 'bg-emerald-600' },
+    { to: '/store/dashboard?tab=roi', label: 'ROI & Impact', icon: Calculator, badge: '₹1.09k Net', badgeColor: 'bg-emerald-600' },
+    { to: '/store/dashboard?tab=employees', label: 'Employees', icon: Users },
     { to: '/store/recommendations', label: 'AI Recommendations', icon: Sparkles, badge: pendingRecs > 0 ? `${pendingRecs}` : undefined, badgeColor: 'bg-emerald-500' },
-    { to: '/store/actions', label: 'Action & Outcomes', icon: GitCommit, badge: 'Loop', badgeColor: 'bg-indigo-500' },
-    { to: '/store/memory', label: 'Store Memory', icon: BrainCircuit },
+    { to: '/store/actions', label: 'Self-Adaptive Loop', icon: GitCommit, badge: 'Loop', badgeColor: 'bg-indigo-500' },
   ];
 
   return (

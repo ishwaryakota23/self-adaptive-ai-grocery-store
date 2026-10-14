@@ -2,6 +2,8 @@ import { db } from './db.js';
 import { cartService } from './cartService.js';
 import { missionService } from './missionService.js';
 import { eventService } from './eventService.js';
+import { storeNavigationService } from './storeNavigationService.js';
+import { hindsightService } from './hindsightService.js';
 import { Product, CartItem, ShoppingMission, InventoryItem, SubstitutionRecord } from '../types/index.js';
 
 export interface ToolExecutionResult {
@@ -76,15 +78,15 @@ export const GROQ_TOOL_DEFINITIONS = [
     type: 'function',
     function: {
       name: 'addToCart',
-      description: 'Add an item to the customer cart',
+      description: 'Add an item to the customer cart by product name or ID',
       parameters: {
         type: 'object',
         properties: {
-          productId: { type: 'string', description: 'Product ID' },
+          productIdOrName: { type: 'string', description: 'Product name (e.g. "brown bread", "milk", "pasta") or product ID' },
           quantity: { type: 'number', description: 'Quantity (default 1)' },
-          sessionId: { type: 'string', description: 'Session ID' }
+          sessionId: { type: 'string', description: 'Session ID (optional)' }
         },
-        required: ['productId', 'sessionId']
+        required: ['productIdOrName']
       }
     }
   },
@@ -115,6 +117,37 @@ export const GROQ_TOOL_DEFINITIONS = [
   {
     type: 'function',
     function: {
+      name: 'removeFromCart',
+      description: 'Remove an item from the customer cart by product name or ID',
+      parameters: {
+        type: 'object',
+        properties: {
+          productIdOrName: { type: 'string', description: 'Product name or ID to remove' },
+          sessionId: { type: 'string', description: 'Session ID (optional)' }
+        },
+        required: ['productIdOrName']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'updateCartQuantity',
+      description: 'Update the quantity of an existing item in the cart',
+      parameters: {
+        type: 'object',
+        properties: {
+          productIdOrName: { type: 'string', description: 'Product name or ID' },
+          quantity: { type: 'number', description: 'New quantity' },
+          sessionId: { type: 'string', description: 'Session ID (optional)' }
+        },
+        required: ['productIdOrName', 'quantity']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'getCustomerMission',
       description: 'Get active mission checklist for customer',
       parameters: {
@@ -139,6 +172,12 @@ function findProduct(query: string): Product | undefined {
   const byName = all.find(p => p.name.toLowerCase() === clean);
   if (byName) return byName;
 
+  // Category-level requests with multiple SKUs must remain unresolved. The
+  // cart actions below turn this into a clarification instead of picking the
+  // first brand in catalogue order.
+  if (/\b(brown bread|whole wheat bread|wheat bread|bread|toast|roti|milk|doodh|paalu|pasta|macaroni|curd|dahi|perugu|yogurt|ice cream|icecream|dessert|chocolate|chocolates|biscuit|biscuits|cookie|cookies|noodles)\b/.test(clean)
+    && !/\b(english oven|modern|britannia|barilla|del monte|nandini|country delight|amul|milky mist|mother dairy|cornetto|havmor|ferrero|kitkat|parle|oreo|mcvities|maggi)\b/.test(clean)) return undefined;
+
   // Partial name
   const partial = all.find(p => p.name.toLowerCase().includes(clean) || clean.includes(p.name.toLowerCase()));
   if (partial) return partial;
@@ -147,24 +186,123 @@ function findProduct(query: string): Product | undefined {
   const byTag = all.find(p => p.tags.some(t => clean.includes(t.toLowerCase())) || p.description.toLowerCase().includes(clean));
   if (byTag) return byTag;
 
-  // Common synonym mapping
-  if (clean.includes('milk') || clean.includes('doodh') || clean.includes('paalu')) {
-    return all.find(p => p.id === 'prod-taaza-milk');
+  // Common synonym and specific category mappings
+  if (clean.includes('brown bread') || clean.includes('whole wheat bread') || clean.includes('wheat bread')) {
+    return all.find(p => p.id === 'prod-bread-english-oven') || all.find(p => p.id === 'prod-bread-modern-brown') || all.find(p => p.id === 'prod-bread');
   }
-  if (clean.includes('curd') || clean.includes('dahi') || clean.includes('perugu')) {
-    return all.find(p => p.id === 'prod-curd');
+  if (clean.includes('english oven')) {
+    return all.find(p => p.id === 'prod-bread-english-oven');
+  }
+  if (clean.includes('modern bread') || clean.includes('modern brown')) {
+    return all.find(p => p.id === 'prod-bread-modern-brown');
+  }
+  if (clean.includes('britannia')) {
+    return all.find(p => p.id === 'prod-bread-britannia-wheat');
+  }
+  if (clean.includes('bread') || clean.includes('toast') || clean.includes('roti')) {
+    return all.find(p => p.id === 'prod-bread-english-oven') || all.find(p => p.id === 'prod-bread');
+  }
+  if (clean.includes('barilla') || clean.includes('penne')) {
+    return all.find(p => p.id === 'prod-pasta-barilla-penne') || all.find(p => p.id === 'prod-pasta');
+  }
+  if (clean.includes('fusilli') || clean.includes('del monte')) {
+    return all.find(p => p.id === 'prod-pasta-delmonte-fusilli') || all.find(p => p.id === 'prod-pasta');
+  }
+  if (clean.includes('pasta') || clean.includes('macaroni')) {
+    return all.find(p => p.id === 'prod-pasta-barilla-penne') || all.find(p => p.id === 'prod-pasta');
+  }
+  if (clean.includes('spinach') || clean.includes('palak') || clean.includes('koora')) {
+    return all.find(p => p.id === 'prod-spinach');
+  }
+  if (clean.includes('broccoli')) {
+    return all.find(p => p.id === 'prod-broccoli');
+  }
+  if (clean.includes('carrot') || clean.includes('gajar') || clean.includes('carrots')) {
+    return all.find(p => p.id === 'prod-carrots');
+  }
+  if (clean.includes('capsicum') || clean.includes('bell pepper') || clean.includes('mirchi')) {
+    return all.find(p => p.id === 'prod-capsicum');
+  }
+  if (clean.includes('potato') || clean.includes('potatoes') || clean.includes('aloo') || clean.includes('bangaladumpa')) {
+    return all.find(p => p.id === 'prod-potatoes');
+  }
+  if (clean.includes('nandini')) {
+    return all.find(p => p.id === 'prod-nandini-milk');
+  }
+  if (clean.includes('country delight')) {
+    return all.find(p => p.id === 'prod-country-delight-milk');
+  }
+  if (clean.includes('gold milk') || clean.includes('full cream')) {
+    return all.find(p => p.id === 'prod-amul-gold-milk');
+  }
+  if (clean.includes('milk') || clean.includes('doodh') || clean.includes('paalu')) {
+    return all.find(p => p.id === 'prod-taaza-milk-500ml') || all.find(p => p.id === 'prod-nandini-milk') || all.find(p => p.id === 'prod-taaza-milk');
+  }
+  if (clean.includes('milky mist curd')) {
+    return all.find(p => p.id === 'prod-curd-milky-mist');
+  }
+  if (clean.includes('mother dairy')) {
+    return all.find(p => p.id === 'prod-curd-mother-dairy');
+  }
+  if (clean.includes('curd') || clean.includes('dahi') || clean.includes('perugu') || clean.includes('yogurt')) {
+    return all.find(p => p.id === 'prod-curd') || all.find(p => p.id === 'prod-curd-milky-mist') || all.find(p => p.id === 'prod-curd-mother-dairy');
+  }
+  if (clean.includes('vanilla') || clean.includes('amul vanilla')) {
+    return all.find(p => p.id === 'prod-amul-vanilla');
+  }
+  if (clean.includes('cornetto')) {
+    return all.find(p => p.id === 'prod-cornetto-choco');
+  }
+  if (clean.includes('havmor') || clean.includes('belgian')) {
+    return all.find(p => p.id === 'prod-havmor-belgian');
+  }
+  if (clean.includes('ice cream') || clean.includes('icecream') || clean.includes('dessert')) {
+    return all.find(p => p.id === 'prod-amul-vanilla') || all.find(p => p.id === 'prod-cornetto-choco');
+  }
+  if (clean.includes('silk') || clean.includes('dairy milk')) {
+    return all.find(p => p.id === 'prod-cadbury-silk');
+  }
+  if (clean.includes('ferrero') || clean.includes('rocher')) {
+    return all.find(p => p.id === 'prod-ferrero-rocher');
+  }
+  if (clean.includes('kitkat') || clean.includes('kit kat')) {
+    return all.find(p => p.id === 'prod-kitkat-share');
+  }
+  if (clean.includes('dark chocolate')) {
+    return all.find(p => p.id === 'prod-amul-dark-choco');
+  }
+  if (clean.includes('chocolate') || clean.includes('chocolates') || clean.includes('mithai')) {
+    return all.find(p => p.id === 'prod-cadbury-silk') || all.find(p => p.id === 'prod-kitkat-share');
+  }
+  if (clean.includes('dark fantasy')) {
+    return all.find(p => p.id === 'prod-dark-fantasy');
+  }
+  if (clean.includes('digestive') || clean.includes('mcvities')) {
+    return all.find(p => p.id === 'prod-mcvities-digestive');
+  }
+  if (clean.includes('parle') || clean.includes('parle-g')) {
+    return all.find(p => p.id === 'prod-parleg-250g');
+  }
+  if (clean.includes('good day') || clean.includes('goodday')) {
+    return all.find(p => p.id === 'prod-goodday-200g');
+  }
+  if (clean.includes('oreo')) {
+    return all.find(p => p.id === 'prod-oreo-120g');
+  }
+  if (clean.includes('biscuit') || clean.includes('biscuits') || clean.includes('cookie') || clean.includes('cookies')) {
+    return all.find(p => p.id === 'prod-parleg-250g') || all.find(p => p.id === 'prod-goodday-200g');
+  }
+  if (clean.includes('maggi') || clean.includes('noodles')) {
+    return all.find(p => p.id === 'prod-maggi-70g') || all.find(p => p.id === 'prod-maggi-280g');
+  }
+  if (clean.includes('nutella')) {
+    return all.find(p => p.id === 'prod-nutella-350g');
   }
   if (clean.includes('paneer')) {
     return all.find(p => p.id === 'prod-paneer');
   }
-  if (clean.includes('bread')) {
-    return all.find(p => p.id === 'prod-bread');
-  }
-  if (clean.includes('pasta')) {
-    return all.find(p => p.id === 'prod-pasta');
-  }
   if (clean.includes('olive') || clean.includes('oil')) {
-    return all.find(p => p.id === 'prod-oliveoil');
+    return all.find(p => p.id === 'prod-oliveoil') || all.find(p => p.id === 'prod-fortune-oil-1l');
   }
   if (clean.includes('tomato')) {
     return all.find(p => p.id === 'prod-tomatoes');
@@ -173,22 +311,31 @@ function findProduct(query: string): Product | undefined {
     return all.find(p => p.id === 'prod-onions');
   }
   if (clean.includes('cheese')) {
-    return all.find(p => p.id === 'prod-cheese');
+    return all.find(p => p.id === 'prod-cheese') || all.find(p => p.id === 'prod-cheese-100g');
   }
   if (clean.includes('tofu')) {
     return all.find(p => p.id === 'prod-tofu');
-  }
-  if (clean.includes('yogurt')) {
-    return all.find(p => p.id === 'prod-greekyogurt');
   }
 
   return undefined;
 }
 
+function ambiguousProductMessage(query: string): string | undefined {
+  const words = query.toLowerCase().trim().split(/\s+/).filter(word => word.length > 1 && !['the', 'a', 'an', 'please', 'cart', 'basket'].includes(word));
+  if (!words.length) return undefined;
+  const matches = db.getProducts().filter(product => words.every(word =>
+    `${product.name} ${product.brand} ${product.tags.join(' ')}`.toLowerCase().includes(word)
+  ));
+  const unique = [...new Map(matches.map(product => [product.id, product])).values()];
+  if (unique.length < 2) return undefined;
+  return `Several products match "${query}": ${unique.slice(0, 4).map(product => `${product.name} (₹${product.price})`).join(' or ')}. Ask the customer which one they mean.`;
+}
+
 export async function executeCustomerAgentTool(
   toolName: string,
   args: Record<string, any>,
-  fallbackSessionId = 'USER00001'
+  fallbackSessionId = 'USER00001',
+  authenticatedCustomerId = ''
 ): Promise<ToolExecutionResult> {
   const sessionId = args.sessionId || fallbackSessionId;
 
@@ -206,10 +353,12 @@ export async function executeCustomerAgentTool(
           (args.category && p.category_name?.toLowerCase().includes(args.category.toLowerCase()))
         );
 
+        const ranked = filtered;
+
         eventService.recordEvent({
           event_type: 'PRODUCT_SEARCH',
           customer_session_id: sessionId,
-          metadata: { query, resultsCount: filtered.length }
+          metadata: { query, resultsCount: ranked.length }
         });
 
         return {
@@ -217,14 +366,20 @@ export async function executeCustomerAgentTool(
           success: true,
           result: {
             query,
-            totalFound: filtered.length,
-            products: filtered.map(p => ({
+            totalFound: ranked.length,
+            products: ranked.map(p => ({
               id: p.id,
+              sku_id: p.sku_id,
               name: p.name,
+              brand: p.brand,
               price: p.price,
               aisle: p.aisle,
               shelf_location: p.shelf_location,
-              in_stock: (db.getInventoryByProductId(p.id)?.quantity || 0) > 0
+              in_stock: (db.getInventoryByProductId(p.id)?.quantity || 0) > 0,
+              reasonBadge: (p as any).reasonBadge,
+              isPreferred: !!(p as any).reasonBadge?.includes('⭐'),
+              isDeprioritized: !!(p as any).isDeprioritized,
+              personalizedScore: (p as any).personalizedScore
             }))
           }
         };
@@ -305,6 +460,7 @@ export async function executeCustomerAgentTool(
         if (!target) {
           return { tool_name: toolName, success: false, result: null, error: `Could not identify product "${args.productIdOrName}"` };
         }
+        const calcRoute = storeNavigationService.calculateRouteToProduct(target);
         return {
           tool_name: toolName,
           success: true,
@@ -313,6 +469,8 @@ export async function executeCustomerAgentTool(
             name: target.name,
             aisle: target.aisle,
             shelf_location: target.shelf_location,
+            distanceMeters: calcRoute.totalDistanceMeters,
+            walkingTimeFormatted: calcRoute.estimatedWalkingMinutesFormatted,
             mapRoute: `/customer/map?product=${target.id}`
           }
         };
@@ -344,17 +502,52 @@ export async function executeCustomerAgentTool(
           });
         }
 
-        // Rank candidates by tag similarity and rating
+        // Dynamic Customer Hindsight Recall for previously accepted substitutes
+        let pastAcceptedSubName = '';
+        try {
+          if (authenticatedCustomerId) {
+            const memories = await hindsightService.recallCustomerMemories(
+              authenticatedCustomerId,
+              `${target?.name || args.productIdOrName} substitute oats accepted`
+            );
+            for (const m of memories.results || []) {
+              const mText = m.text.toLowerCase();
+              const candidate = candidates.find(c => mText.includes(c.name.toLowerCase()));
+              if (candidate && /accepted substitute|substitute accepted|accepted .*substitut/.test(mText)) pastAcceptedSubName = candidate.name.toLowerCase();
+            }
+          }
+        } catch {}
+
+        // Also check db substitutions for this customer session/account
+        const pastDbSub = db.getSubstitutions().find(s =>
+          (s.customer_session_id === sessionId || s.requested_product_name.toLowerCase().includes('oats') || (target && s.requested_product_name.toLowerCase() === target.name.toLowerCase())) &&
+          s.substitute_accepted
+        );
+        if (pastDbSub) {
+          pastAcceptedSubName = pastDbSub.substitute_product_name.toLowerCase();
+        }
+
+        // Rank candidates by tag similarity and rating, boosting prior accepted substitute
         const targetTags = new Set(target?.tags || []);
         const scoredCandidates = candidates.map(c => {
           let score = c.rating || 4.0;
           for (const t of c.tags) {
             if (targetTags.has(t)) score += 1.5;
           }
-          return { product: c, score };
+
+          // Boost only a substitute named by a real stored customer memory or DB record.
+          const isPreviouslyAccepted = !!pastAcceptedSubName && c.name.toLowerCase().includes(pastAcceptedSubName);
+
+          if (isPreviouslyAccepted) {
+            score += 10.0; // Surface immediately as #1 choice
+          }
+          return { product: c, score, isPreviouslyAccepted };
         }).sort((a, b) => b.score - a.score);
 
-        const topSubstitutes = scoredCandidates.slice(0, 3).map(s => s.product);
+        const topSubstitutes = scoredCandidates.slice(0, 3).map(s => ({
+          ...s.product,
+          badge: s.isPreviouslyAccepted ? '🔄 Previously accepted substitute by you' : undefined
+        }));
 
         // Record substitution event in database ledger
         if (topSubstitutes.length > 0) {
@@ -386,7 +579,8 @@ export async function executeCustomerAgentTool(
               shelf_location: s.shelf_location,
               image_url: s.image_url,
               tags: s.tags,
-              in_stock_qty: db.getInventoryByProductId(s.id)?.quantity || 0
+              in_stock_qty: db.getInventoryByProductId(s.id)?.quantity || 0,
+              badge: s.badge
             }))
           }
         };
@@ -439,9 +633,10 @@ export async function executeCustomerAgentTool(
 
       // 8. addToCart
       case 'addToCart': {
-        const target = findProduct(args.productId || args.productIdOrName);
+        const requested = String(args.productId || args.productIdOrName || '');
+        const target = findProduct(requested);
         if (!target) {
-          return { tool_name: toolName, success: false, result: null, error: `Product not found: ${args.productId || args.productIdOrName}` };
+          return { tool_name: toolName, success: false, result: null, error: ambiguousProductMessage(requested) || `Product not found: ${requested}` };
         }
         const inv = db.getInventoryByProductId(target.id);
         const availableStock = inv?.quantity || 0;
@@ -459,11 +654,24 @@ export async function executeCustomerAgentTool(
         const cartItem = cartService.addToCart(target, qty, sessionId, 'LARGE_DISPLAY');
         const totals = cartService.getTotals(sessionId);
 
-        // If adding an item that fulfills a substitution, record acceptance
+        // Retain positive preference into Customer Hindsight
+        try {
+          if (authenticatedCustomerId) await hindsightService.retainCustomerPreferenceExperience(authenticatedCustomerId, target.name, true, 0.88);
+        } catch {}
+
+        // If adding an item that fulfills a substitution, record acceptance and retain in Hindsight
         const subs = db.getSubstitutions();
         const pendingSub = subs.find(s => s.customer_session_id === sessionId && s.substitute_product_id === target.id && !s.substitute_accepted);
         if (pendingSub) {
           db.recordSubstitutionAccepted(pendingSub.id, sessionId);
+          try {
+            if (authenticatedCustomerId) await hindsightService.retainCustomerSubstitutionExperience(
+              authenticatedCustomerId,
+              pendingSub.requested_product_name,
+              target.name,
+              true
+            );
+          } catch {}
         }
 
         return {
@@ -487,7 +695,9 @@ export async function executeCustomerAgentTool(
 
       // 9. removeFromCart
       case 'removeFromCart': {
-        const target = findProduct(args.productId || args.productIdOrName);
+        const requested = String(args.productId || args.productIdOrName || '');
+        const target = findProduct(requested);
+        if (!target && ambiguousProductMessage(requested)) return { tool_name: toolName, success: false, result: null, error: ambiguousProductMessage(requested) };
         const currentCart = cartService.getCart(sessionId);
         const item = currentCart.find(c => c.product_id === target?.id || c.id === args.productId || c.product_id === args.productIdOrName);
         if (!item) {
@@ -510,7 +720,9 @@ export async function executeCustomerAgentTool(
 
       // 10. updateCartQuantity
       case 'updateCartQuantity': {
-        const target = findProduct(args.productId || args.productIdOrName);
+        const requested = String(args.productId || args.productIdOrName || '');
+        const target = findProduct(requested);
+        if (!target && ambiguousProductMessage(requested)) return { tool_name: toolName, success: false, result: null, error: ambiguousProductMessage(requested) };
         const currentCart = cartService.getCart(sessionId);
         const item = currentCart.find(c => c.product_id === target?.id || c.id === args.productId || c.product_id === args.productIdOrName);
         if (!item) {
@@ -638,12 +850,7 @@ export async function executeCustomerAgentTool(
         if (!target) {
           return { tool_name: toolName, success: false, result: null, error: `Product not found: "${args.productIdOrName}"` };
         }
-        const routeSteps = [
-          'Start from Store Entrance',
-          'Walk straight past Produce Section',
-          `Turn into ${target.aisle}`,
-          `Locate shelf: ${target.shelf_location}`
-        ];
+        const calcRoute = storeNavigationService.calculateRouteToProduct(target);
         return {
           tool_name: toolName,
           success: true,
@@ -651,8 +858,11 @@ export async function executeCustomerAgentTool(
             productId: target.id,
             name: target.name,
             aisle: target.aisle,
-            directions: `Start from Store Entrance -> Walk straight past Produce Section -> Turn into ${target.aisle} -> Locate shelf: ${target.shelf_location}.`,
-            steps: routeSteps,
+            shelf_location: target.shelf_location,
+            distanceMeters: calcRoute.totalDistanceMeters,
+            walkingTimeFormatted: calcRoute.estimatedWalkingMinutesFormatted,
+            directions: calcRoute.turnByTurnInstructions.join(' -> '),
+            steps: calcRoute.turnByTurnInstructions,
             mapUrl: `/customer/map?product=${target.id}`
           }
         };
@@ -664,24 +874,31 @@ export async function executeCustomerAgentTool(
         const mission = missionService.getActiveMission(sessionId);
         const allProducts = db.getProducts();
 
-        // Recommend products matching dietary preferences or complementary to mission items
-        const recommended = allProducts.filter(p => {
+        // Candidates matching dietary preferences, category affinity, or catalog
+        const candidates = allProducts.filter(p => {
           if (prefs?.preferred_brands.includes(p.brand)) return true;
           if (prefs?.dietary_preferences.some(d => p.tags.includes(d))) return true;
-          return false;
-        }).slice(0, 3);
+          return true;
+        });
+
+        const ranked = candidates;
+        // Prioritize non-deprioritized recommendations
+        const nonDeprioritized = ranked.filter(r => !(r as any).isDeprioritized);
+        const topRecs = (nonDeprioritized.length >= 3 ? nonDeprioritized : ranked).slice(0, 3);
 
         return {
           tool_name: toolName,
           success: true,
           result: {
             sessionId,
-            recommendations: recommended.map(r => ({
+            recommendations: topRecs.map(r => ({
               id: r.id,
               name: r.name,
               price: r.price,
-              reason: `Matches dietary preferences (${prefs?.dietary_preferences.join(', ') || 'Grocery Choice'})`,
-              aisle: r.aisle
+              reason: (r as any).reasonBadge || `Matches preferences (${prefs?.dietary_preferences.join(', ') || 'Grocery Choice'})`,
+              badge: (r as any).reasonBadge,
+              aisle: r.aisle,
+              personalizedScore: undefined
             }))
           }
         };
@@ -689,15 +906,34 @@ export async function executeCustomerAgentTool(
 
       // 18. recordRecommendationResponse
       case 'recordRecommendationResponse': {
+        const isAccepted = args.response === 'accepted';
         eventService.recordEvent({
-          event_type: args.response === 'accepted' ? 'RECOMMENDATION_ACCEPTED' : 'RECOMMENDATION_REJECTED',
+          event_type: isAccepted ? 'RECOMMENDATION_ACCEPTED' : 'RECOMMENDATION_REJECTED',
           customer_session_id: sessionId,
-          metadata: { recommendationId: args.recommendationId, response: args.response }
+          metadata: { recommendationId: args.recommendationId, productName: args.productName, response: args.response }
         });
+
+        // Retain preference outcome into Customer Hindsight
+        const targetName = args.productName || args.recommendationId || '';
+        let hindsightRetained = false;
+        if (targetName) {
+          try {
+            const customerId = authenticatedCustomerId;
+            if (!customerId) throw new Error('A verified customer identity is required to retain this preference outcome.');
+            const retained = await hindsightService.retainCustomerPreferenceExperience(
+              customerId,
+              targetName,
+              isAccepted,
+              isAccepted ? 0.88 : 0.82
+            );
+            hindsightRetained = retained.success;
+          } catch {}
+        }
+
         return {
           tool_name: toolName,
           success: true,
-          result: { recorded: true, response: args.response }
+            result: { recorded: true, response: args.response, hindsightRetained }
         };
       }
 
