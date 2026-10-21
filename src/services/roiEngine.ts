@@ -1,4 +1,4 @@
-import {
+﻿import {
   RoiMetricClassification,
   RoiDataConfidence,
   RoiMetricResult,
@@ -9,7 +9,7 @@ import {
   ActionOutcome
 } from '../types';
 import { db } from './db';
-import { hindsightService } from './hindsightService';
+import { memoryService } from './nativeMemoryService';
 
 /**
  * ============================================================================
@@ -41,8 +41,8 @@ export class RoiEngine {
   private static instance: RoiEngine;
 
   // Configured system cost constants (only applied when explicitly configured)
-  private defaultCostPerInference = 0; // ₹0 per inference by default unless configured
-  private defaultInterventionLaborCost = 150; // Standard shelf replenishment task cost in ₹
+  private defaultCostPerInference = 0; // â‚¹0 per inference by default unless configured
+  private defaultInterventionLaborCost = 150; // Standard shelf replenishment task cost in â‚¹
 
   private constructor() {}
 
@@ -57,7 +57,7 @@ export class RoiEngine {
   // 1. STOCKOUT LOSS AVOIDED / SALES OPPORTUNITY PRESERVED
   // ==========================================================================
   /**
-   * Formula: unmetDemandUnits × sellingPrice
+   * Formula: unmetDemandUnits Ã— sellingPrice
    * Classification: ESTIMATED (unless directly measured from captured back-orders)
    */
   public calculateStockoutAvoidedImpact(params: {
@@ -86,7 +86,7 @@ export class RoiEngine {
         classification: 'ESTIMATED',
         value: 0,
         formattedValue: 'Insufficient data to calculate this metric',
-        formula: 'unmet_demand_units × selling_price',
+        formula: 'unmet_demand_units Ã— selling_price',
         inputs: { sellingPrice, unmetDemandUnits },
         calculatedAt: timestamp,
         confidence: 'INSUFFICIENT_DATA',
@@ -104,8 +104,8 @@ export class RoiEngine {
       metricName: 'Sales Opportunity Preserved',
       classification,
       value: calculatedValue,
-      formattedValue: `₹${calculatedValue.toLocaleString()}`,
-      formula: `${unmetDemandUnits} units × ₹${sellingPrice} = ₹${calculatedValue.toLocaleString()}`,
+      formattedValue: `â‚¹${calculatedValue.toLocaleString()}`,
+      formula: `${unmetDemandUnits} units Ã— â‚¹${sellingPrice} = â‚¹${calculatedValue.toLocaleString()}`,
       inputs: {
         sellingPrice,
         unmetDemandUnits,
@@ -126,7 +126,7 @@ export class RoiEngine {
   // 2. WASTAGE REDUCTION
   // ==========================================================================
   /**
-   * Formula: (preWastageUnits - postWastageUnits) × costPerUnit
+   * Formula: (preWastageUnits - postWastageUnits) Ã— costPerUnit
    * Classification: ACTUAL (if inventory audit events recorded), else ESTIMATED
    */
   public calculateWastageReductionImpact(params: {
@@ -159,7 +159,7 @@ export class RoiEngine {
         classification: 'ESTIMATED',
         value: 0,
         formattedValue: 'Insufficient data to calculate this metric',
-        formula: '(pre_wastage_units - post_wastage_units) × cost_per_unit',
+        formula: '(pre_wastage_units - post_wastage_units) Ã— cost_per_unit',
         inputs: { preInterventionWastageUnits: pre, postInterventionWastageUnits: post, costPerUnit: cost },
         calculatedAt: timestamp,
         confidence: 'INSUFFICIENT_DATA',
@@ -178,8 +178,8 @@ export class RoiEngine {
       metricName: 'Wastage Reduced',
       classification,
       value: calculatedValue,
-      formattedValue: `₹${calculatedValue.toLocaleString()}`,
-      formula: `(${pre} units - ${post} units) × ₹${cost} = ₹${calculatedValue.toLocaleString()}`,
+      formattedValue: `â‚¹${calculatedValue.toLocaleString()}`,
+      formula: `(${pre} units - ${post} units) Ã— â‚¹${cost} = â‚¹${calculatedValue.toLocaleString()}`,
       inputs: {
         preInterventionWastageUnits: pre,
         postInterventionWastageUnits: post,
@@ -275,8 +275,8 @@ export class RoiEngine {
   // 4. INVENTORY HOLDING / OVERSTOCK IMPACT
   // ==========================================================================
   /**
-   * Formula: excessUnits × holdingDurationDays × carryingCostPerUnitPerDay
-   * If carrying-cost data is not configured: returns "ROI unavailable — insufficient cost data"
+   * Formula: excessUnits Ã— holdingDurationDays Ã— carryingCostPerUnitPerDay
+   * If carrying-cost data is not configured: returns "ROI unavailable â€” insufficient cost data"
    */
   public calculateInventoryHoldingImpact(params: {
     excessUnits?: number;
@@ -304,8 +304,8 @@ export class RoiEngine {
         metricName: 'Inventory Holding Impact',
         classification: 'ESTIMATED',
         value: 0,
-        formattedValue: 'ROI unavailable — insufficient cost data',
-        formula: 'excess_inventory × holding_duration × carrying_cost_rate',
+        formattedValue: 'ROI unavailable â€” insufficient cost data',
+        formula: 'excess_inventory Ã— holding_duration Ã— carrying_cost_rate',
         inputs: { excessUnits: excess, holdingDurationDays: days, carryingCostPerUnitPerDay: rate },
         calculatedAt: timestamp,
         confidence: 'INSUFFICIENT_DATA',
@@ -322,8 +322,8 @@ export class RoiEngine {
       metricName: 'Inventory Holding Impact',
       classification: 'ESTIMATED',
       value: calculatedValue,
-      formattedValue: `₹${calculatedValue.toLocaleString()}`,
-      formula: `${excess} units × ${days} days × ₹${rate}/day = ₹${calculatedValue.toLocaleString()}`,
+      formattedValue: `â‚¹${calculatedValue.toLocaleString()}`,
+      formula: `${excess} units Ã— ${days} days Ã— â‚¹${rate}/day = â‚¹${calculatedValue.toLocaleString()}`,
       inputs: { excessUnits: excess, holdingDurationDays: days, carryingCostPerUnitPerDay: rate },
       calculatedAt: timestamp,
       confidence: 'MEDIUM',
@@ -338,7 +338,7 @@ export class RoiEngine {
   // 5. OPERATIONAL COST
   // ==========================================================================
   /**
-   * Formula: interventionCost + (aiInferenceCount × costPerInference) + hardwareCost
+   * Formula: interventionCost + (aiInferenceCount Ã— costPerInference) + hardwareCost
    * Classification: ACTUAL
    * Only includes costs that are explicitly configured or recorded.
    */
@@ -363,7 +363,7 @@ export class RoiEngine {
         classification: 'ACTUAL',
         value: 0,
         formattedValue: 'Insufficient data to calculate this metric',
-        formula: 'intervention_labor + (ai_inferences × cost_per_inference) + hardware_cost',
+        formula: 'intervention_labor + (ai_inferences Ã— cost_per_inference) + hardware_cost',
         inputs: { interventionCost: labor, aiInferenceCount: inferences, costPerInference: costPerInf, hardwareCost: hardware },
         calculatedAt: timestamp,
         confidence: 'INSUFFICIENT_DATA',
@@ -378,17 +378,17 @@ export class RoiEngine {
     const totalCost = Math.round((labor + aiCost + hardware) * 100) / 100;
 
     const formulaParts: string[] = [];
-    if (labor > 0) formulaParts.push(`Intervention Labor (₹${labor})`);
-    if (aiCost > 0) formulaParts.push(`AI Inferences (${inferences} × ₹${costPerInf})`);
-    if (hardware > 0) formulaParts.push(`Hardware Allocation (₹${hardware})`);
-    if (formulaParts.length === 0) formulaParts.push(`₹0 (Standard operating baseline, zero incremental intervention cost)`);
+    if (labor > 0) formulaParts.push(`Intervention Labor (â‚¹${labor})`);
+    if (aiCost > 0) formulaParts.push(`AI Inferences (${inferences} Ã— â‚¹${costPerInf})`);
+    if (hardware > 0) formulaParts.push(`Hardware Allocation (â‚¹${hardware})`);
+    if (formulaParts.length === 0) formulaParts.push(`â‚¹0 (Standard operating baseline, zero incremental intervention cost)`);
 
     return {
       metricName: 'Operational Cost',
       classification: 'ACTUAL',
       value: totalCost,
-      formattedValue: `₹${totalCost.toLocaleString()}`,
-      formula: `${formulaParts.join(' + ')} = ₹${totalCost.toLocaleString()}`,
+      formattedValue: `â‚¹${totalCost.toLocaleString()}`,
+      formula: `${formulaParts.join(' + ')} = â‚¹${totalCost.toLocaleString()}`,
       inputs: {
         interventionCost: labor,
         aiInferenceCount: inferences,
@@ -454,8 +454,8 @@ export class RoiEngine {
       metricName: `${labelPrefix} Net Business Impact`,
       classification,
       value: net,
-      formattedValue: `₹${net.toLocaleString()}`,
-      formula: `Gross Benefit (₹${grossBenefit.value.toLocaleString()}) - Operational Cost (₹${operationalCost.value.toLocaleString()}) = ₹${net.toLocaleString()}`,
+      formattedValue: `â‚¹${net.toLocaleString()}`,
+      formula: `Gross Benefit (â‚¹${grossBenefit.value.toLocaleString()}) - Operational Cost (â‚¹${operationalCost.value.toLocaleString()}) = â‚¹${net.toLocaleString()}`,
       inputs: {
         grossBenefitValue: grossBenefit.value,
         grossBenefitClassification: grossBenefit.classification,
@@ -499,8 +499,8 @@ export class RoiEngine {
       metricName: 'Projected Monthly Business Impact',
       classification: 'PROJECTED',
       value: projectedNet,
-      formattedValue: `₹${projectedNet.toLocaleString()}`,
-      formula: `(₹${benefit} - ₹${cost}) × ${periods} periods/month = ₹${projectedNet.toLocaleString()}`,
+      formattedValue: `â‚¹${projectedNet.toLocaleString()}`,
+      formula: `(â‚¹${benefit} - â‚¹${cost}) Ã— ${periods} periods/month = â‚¹${projectedNet.toLocaleString()}`,
       inputs: {
         recurringBenefitPerPeriod: benefit,
         periodsPerMonth: periods,
@@ -654,18 +654,18 @@ export class RoiEngine {
       totalCost,
       netImpact,
       isNetPositive: netImpact > 0,
-      summary: `Expected Gross Opportunity of ₹${grossBenefit.toLocaleString()} with ₹${totalCost.toLocaleString()} decision labor cost. Measured Realized Net Impact: ₹${netImpact.toLocaleString()} (Expected ≠ Realized). Demand fulfillment improved by ${demandFulfillment.formattedValue}.`,
+      summary: `Expected Gross Opportunity of â‚¹${grossBenefit.toLocaleString()} with â‚¹${totalCost.toLocaleString()} decision labor cost. Measured Realized Net Impact: â‚¹${netImpact.toLocaleString()} (Expected â‰  Realized). Demand fulfillment improved by ${demandFulfillment.formattedValue}.`,
       
       // Explicit Closed-Loop ROI Tracking (Requirement 4 & 5)
       expectedBenefit: grossBenefit,
-      expectedBenefitFormatted: `₹${grossBenefit.toLocaleString()}`,
+      expectedBenefitFormatted: `â‚¹${grossBenefit.toLocaleString()}`,
       decisionCost: totalCost,
-      decisionCostFormatted: `₹${totalCost.toLocaleString()}`,
+      decisionCostFormatted: `â‚¹${totalCost.toLocaleString()}`,
       actualOutcomeMetric: `${demandFulfillment.formattedValue} fulfillment improvement; ${options?.unmetDemandUnits ?? 31} units recovered`,
       realizedImpact: netImpact,
-      realizedImpactFormatted: `₹${netImpact.toLocaleString()}`,
+      realizedImpactFormatted: `â‚¹${netImpact.toLocaleString()}`,
       isRealizedComputed: true,
-      discrepancyNote: `Pre-action Expected Benefit: ₹${grossBenefit.toLocaleString()} | Decision Cost: ₹${totalCost.toLocaleString()} | Post-action Realized Impact: ₹${netImpact.toLocaleString()} (Expected ≠ Realized)`
+      discrepancyNote: `Pre-action Expected Benefit: â‚¹${grossBenefit.toLocaleString()} | Decision Cost: â‚¹${totalCost.toLocaleString()} | Post-action Realized Impact: â‚¹${netImpact.toLocaleString()} (Expected â‰  Realized)`
     };
   }
 
@@ -700,7 +700,7 @@ export class RoiEngine {
       } else {
         // Deterministic baseline from established historical outcomes (e.g. out-1, out-2)
         if (outcome.id === 'out-1') {
-          // Paneer restock: 42 packs sold @ ₹85 = ₹3,570 opportunity preserved, ₹150 labor cost
+          // Paneer restock: 42 packs sold @ â‚¹85 = â‚¹3,570 opportunity preserved, â‚¹150 labor cost
           totalPreserved += 3570;
           totalCost += 150;
           fulfillmentSum += 26;
@@ -724,7 +724,7 @@ export class RoiEngine {
       metricName: 'Sales Opportunity Preserved',
       classification: 'ESTIMATED',
       value: totalPreserved,
-      formattedValue: `₹${totalPreserved.toLocaleString()}`,
+      formattedValue: `â‚¹${totalPreserved.toLocaleString()}`,
       formula: 'Sum of avoided stockout opportunity values across executed interventions',
       inputs: { totalPreserved, reportsEvaluated: reportsCount },
       calculatedAt: timestamp,
@@ -739,7 +739,7 @@ export class RoiEngine {
       metricName: 'Wastage Reduced',
       classification: 'ESTIMATED',
       value: totalWastageSaved,
-      formattedValue: totalWastageSaved > 0 ? `₹${totalWastageSaved.toLocaleString()}` : '₹0',
+      formattedValue: totalWastageSaved > 0 ? `â‚¹${totalWastageSaved.toLocaleString()}` : 'â‚¹0',
       formula: 'Sum of recorded shelf spoilage delta across managed perishables',
       inputs: { totalWastageSaved },
       calculatedAt: timestamp,
@@ -771,8 +771,8 @@ export class RoiEngine {
       metricName: 'Inventory Holding Savings',
       classification: 'ESTIMATED',
       value: 0,
-      formattedValue: 'ROI unavailable — insufficient cost data',
-      formula: 'excess_inventory × holding_duration × carrying_cost_rate',
+      formattedValue: 'ROI unavailable â€” insufficient cost data',
+      formula: 'excess_inventory Ã— holding_duration Ã— carrying_cost_rate',
       inputs: {},
       calculatedAt: timestamp,
       confidence: 'INSUFFICIENT_DATA',
@@ -786,7 +786,7 @@ export class RoiEngine {
       metricName: 'Operational Cost',
       classification: 'ACTUAL',
       value: totalCost,
-      formattedValue: `₹${totalCost.toLocaleString()}`,
+      formattedValue: `â‚¹${totalCost.toLocaleString()}`,
       formula: 'Sum of shelf-replenishment staff dispatches and execution costs',
       inputs: { totalCost, reportsCount },
       calculatedAt: timestamp,
@@ -801,8 +801,8 @@ export class RoiEngine {
       metricName: 'Estimated Net Business Impact',
       classification: 'ESTIMATED',
       value: netImpact,
-      formattedValue: `₹${netImpact.toLocaleString()}`,
-      formula: `Gross Benefit (₹${grossBenefit.toLocaleString()}) - Operational Cost (₹${totalCost.toLocaleString()}) = ₹${netImpact.toLocaleString()}`,
+      formattedValue: `â‚¹${netImpact.toLocaleString()}`,
+      formula: `Gross Benefit (â‚¹${grossBenefit.toLocaleString()}) - Operational Cost (â‚¹${totalCost.toLocaleString()}) = â‚¹${netImpact.toLocaleString()}`,
       inputs: { grossBenefit, totalCost, netImpact },
       calculatedAt: timestamp,
       confidence: 'HIGH',
@@ -826,7 +826,7 @@ export class RoiEngine {
   }
 
   // ==========================================================================
-  // 10. PART 7 — STRONG STORE HINDSIGHT DEMONSTRATION (MILK STOCKOUT SCENARIO)
+  // 10. PART 7 â€” STRONG STORE HINDSIGHT DEMONSTRATION (MILK STOCKOUT SCENARIO)
   // ==========================================================================
   /**
    * End-to-end implementation of the Part 7 scenario:
@@ -837,11 +837,11 @@ export class RoiEngine {
    * 5. Store action: Dispatches replenishment.
    * 6. Actual outcome: 40 restocked, 31 units sold, 0 stockouts.
    * 7. ROI Engine: Calculates deterministic impact:
-   *    - Selling price: ₹40 (Amul Taaza Milk)
+   *    - Selling price: â‚¹40 (Amul Taaza Milk)
    *    - Unmet demand avoided: 31 units
-   *    - Gross opportunity: 31 × ₹40 = ₹1,240 (ESTIMATED)
-   *    - Operational labor cost: ₹150 (ACTUAL)
-   *    - Net impact: ₹1,240 - ₹150 = ₹1,090 (ESTIMATED)
+   *    - Gross opportunity: 31 Ã— â‚¹40 = â‚¹1,240 (ESTIMATED)
+   *    - Operational labor cost: â‚¹150 (ACTUAL)
+   *    - Net impact: â‚¹1,240 - â‚¹150 = â‚¹1,090 (ESTIMATED)
    *    - Demand fulfillment: 72% -> 96% (+24 percentage points) (ACTUAL)
    * 8. New Store Hindsight: Retains the experience & learned rule.
    */
@@ -861,19 +861,19 @@ export class RoiEngine {
       id: recId,
       type: 'restock',
       title: 'Pre-Evening Milk Replenishment (Aisle 4)',
-      description: 'Milk repeatedly experiences evening stockouts (6 PM–8 PM). Past Hindsight indicates normal 30-unit restock is depleted too quickly. Recommend restocking 40 packs before 5 PM.',
+      description: 'Milk repeatedly experiences evening stockouts (6 PMâ€“8 PM). Past Hindsight indicates normal 30-unit restock is depleted too quickly. Recommend restocking 40 packs before 5 PM.',
       product_id: 'prod-milk-evening',
       product_name: 'Amul Taaza Fresh Toned Milk 500ml',
       suggested_action: 'Restock 40 packs to Dairy Section Aisle 4 before 5:00 PM',
       confidence: 0.95,
       priority: 'high',
-      expected_impact: 'Preserves estimated ₹1,240 evening sales and eliminates peak stockouts',
+      expected_impact: 'Preserves estimated â‚¹1,240 evening sales and eliminates peak stockouts',
       historical_evidence: 'Store Hindsight recalled: Prior restock of 30 units during Sunday evening rush was depleted in 40 mins (+45% surge). Restock adapted to 40-50 units.',
       status: 'pending',
       created_at: `Today, ${timestampStr}`,
       suggested_quantity: 40,
       evidence: [
-        'Repeated stockouts between 6 PM–8 PM over past 5 comparable days',
+        'Repeated stockouts between 6 PMâ€“8 PM over past 5 comparable days',
         'Recurring 31 units of unfulfilled customer demand logged in evening window',
         'Replenishment normally scheduled at 7:30 PM is 2.5 hours too late'
       ],
@@ -912,10 +912,10 @@ export class RoiEngine {
       timestamp: `Today, ${timestampStr}`,
       observed_event: 'Stocked 40 packs of Amul Taaza Milk to Aisle 4 at 4:45 PM prior to predicted evening rush.',
       action_taken: 'Manager approved AI recommendation; staff replenished 40 packs before 5:00 PM.',
-      reobserved_metric: 'Re-observed 6 PM–8 PM: 31 units sold, 9 units buffer maintained, 0 stockout events recorded.',
+      reobserved_metric: 'Re-observed 6 PMâ€“8 PM: 31 units sold, 9 units buffer maintained, 0 stockout events recorded.',
       outcome_summary: 'Evening stockout pattern completely eliminated. Demand fulfillment improved from 72% to 96% (+24 percentage points).',
       satisfaction_delta: '+24% demand fulfillment',
-      sales_delta: '₹1,090 net impact',
+      sales_delta: 'â‚¹1,090 net impact',
       is_hindsight_stored: false,
       evidence_source: 'synthetic-demo',
       roi_report: roiReport,
@@ -926,9 +926,9 @@ export class RoiEngine {
     db.addActionOutcome(outcome);
 
     // This method is a synthetic demonstration; isolate all memory from production store bank.
-    const demoBankId = `${hindsightService.getLearningLabBank('STORE', 'roi-milk-stockout')}-run-${Date.now().toString(36).padEnd(12, '0')}`;
+    const demoBankId = `${memoryService.getLearningLabBank('STORE', 'roi-milk-stockout')}-run-${Date.now().toString(36).padEnd(12, '0')}`;
     const demoDocumentId = `demo-${recId}`;
-    const retainResult = await hindsightService.retain(demoBankId, [
+    const retainResult = await memoryService.retain(demoBankId, [
       'Synthetic demonstration scenario: evening milk stockout and restock.',
       'Scenario values are illustrative and are not verified store measurements.',
       'Demonstrated action: restock 40 packs before 5:00 PM; illustrative outcome: 31 units sold with a 9 unit buffer.',
@@ -948,7 +948,7 @@ export class RoiEngine {
       { stage: 'THINK', title: 'Store Agent Observes & Recalls', detail: 'Identified evening milk deficit (6 PM-8 PM) and recalled past 30-unit depletion memory.', status: 'COMPLETED' },
       { stage: 'DECIDE', title: 'Store Manager Decision', detail: 'Manager reviewed evidence, expected benefit, and approved pre-evening replenishment.', status: 'COMPLETED' },
       { stage: 'ACT', title: 'Store Operational Action', detail: '40 packs replenished to Aisle 4 Shelf B2 at 4:45 PM before peak shopping rush.', status: 'COMPLETED' },
-      { stage: 'MEASURE', title: 'Deterministic ROI Engine', detail: `Evaluated 31 units sold @ ₹40 = ₹1,240 gross opportunity preserved - ₹150 labor = ₹1,090 Net Impact (ESTIMATED).`, status: 'COMPLETED' },
+      { stage: 'MEASURE', title: 'Deterministic ROI Engine', detail: `Evaluated 31 units sold @ â‚¹40 = â‚¹1,240 gross opportunity preserved - â‚¹150 labor = â‚¹1,090 Net Impact (ESTIMATED).`, status: 'COMPLETED' },
       { stage: 'REMEMBER', title: 'Isolated synthetic Hindsight bank', detail: retainResult.success ? `Synthetic demo retained in ${demoBankId}; this is not production store learning.` : `Hindsight retain failed: ${retainResult.error || 'service unavailable'}.`, status: retainResult.success ? 'COMPLETED' : 'FAILED' },
       { stage: 'IMPROVE', title: 'Future Adaptive Recall', detail: 'This synthetic demo does not change production store decisions or verify an operational policy.', status: 'INACTIVE' }
     ];
@@ -964,7 +964,7 @@ export class RoiEngine {
   }
 
   // ==========================================================================
-  // 11. PART 8 — FAILED / UNSUCCESSFUL RECOMMENDATION LEARNING LOOP
+  // 11. PART 8 â€” FAILED / UNSUCCESSFUL RECOMMENDATION LEARNING LOOP
   // ==========================================================================
   /**
    * Demonstrates Hindsight learning from an insufficient or failed recommendation:
@@ -1044,7 +1044,7 @@ export class RoiEngine {
       totalCost: operationalCost.value,
       netImpact: netImpact.value,
       isNetPositive: true,
-      summary: `Net Revenue preserved: ₹${netImpact.value}, but Demand Fulfillment severely failed target by -54.3 percentage points due to inadequate buffer quantity.`
+      summary: `Net Revenue preserved: â‚¹${netImpact.value}, but Demand Fulfillment severely failed target by -54.3 percentage points due to inadequate buffer quantity.`
     };
 
     const learnedRule = 'Restocking only 10 units during weekend rush is insufficient; stock exhausted in 35 minutes causing 18 unfulfilled queries. Future recommendation buffer must be 25 units (+150% buffer) to prevent stockouts.';
@@ -1053,11 +1053,11 @@ export class RoiEngine {
     const outcome: ActionOutcome = {
       id: outcomeId,
       action_id: action.id,
-      title: 'Weekend Produce Restock — Insufficient Buffer Detected',
+      title: 'Weekend Produce Restock â€” Insufficient Buffer Detected',
       timestamp: `Today, ${timestampStr}`,
       observed_event: 'Stocked 10 units of avocados before weekend lunch rush as recommended.',
       action_taken: 'Staff executed approved recommendation of 10 units.',
-      reobserved_metric: 'Stock depleted in 35 minutes; 18 unfulfilled queries logged between 12:30 PM–1:30 PM. Fulfillment dropped to 35.7%.',
+      reobserved_metric: 'Stock depleted in 35 minutes; 18 unfulfilled queries logged between 12:30 PMâ€“1:30 PM. Fulfillment dropped to 35.7%.',
       outcome_summary: 'Under-replenishment detected. Recommendation quantity failed to absorb demand surge.',
       satisfaction_delta: '-54.3% fulfillment deficit',
       sales_delta: '18 unmet sales missed',
@@ -1071,9 +1071,9 @@ export class RoiEngine {
     db.addActionOutcome(outcome);
 
     // Keep this synthetic failure scenario in its own Learning Lab bank.
-    const failedDemoBankId = `${hindsightService.getLearningLabBank('STORE', 'roi-failed-restock')}-run-${Date.now().toString(36).padEnd(12, '0')}`;
+    const failedDemoBankId = `${memoryService.getLearningLabBank('STORE', 'roi-failed-restock')}-run-${Date.now().toString(36).padEnd(12, '0')}`;
     const failedDemoDocumentId = `demo-${recId}`;
-    const retainResult = await hindsightService.retain(failedDemoBankId, [
+    const retainResult = await memoryService.retain(failedDemoBankId, [
       'Synthetic demonstration: insufficient weekend produce restock.',
       'Scenario data is illustrative and is not verified store evidence.',
       `Illustrative scenario: 10 units depleted in 35 minutes; 18 requests remained unmet. Lesson: ${learnedRule}`
@@ -1100,3 +1100,5 @@ export class RoiEngine {
 }
 
 export const roiEngine = RoiEngine.getInstance();
+
+

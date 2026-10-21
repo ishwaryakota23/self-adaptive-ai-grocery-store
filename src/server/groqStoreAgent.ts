@@ -1,13 +1,27 @@
-declare const process: any;
+﻿declare const process: any;
 
 import { GROQ_STORE_TOOL_DEFINITIONS, executeStoreAgentTool, StoreToolExecutionResult, storeAgentTools } from '../services/storeAgentTools.js';
-import { hindsightService } from '../services/hindsightService.js';
+import { memoryService } from '../services/nativeMemoryService.js';
+import { getRelevantContext } from './memoryEngine.js';
 import { db } from '../services/db.js';
 import {
   StoreAgentRequest,
   StoreAgentResponse,
   StructuredRecommendation
 } from '../types/index.js';
+
+export async function loadStoreMemoryContext(query: string, branchId = 'BRANCH-104'): Promise<{ section: string; status: string; recalled: string[] }> {
+  try {
+    const result = await getRelevantContext({ agent: 'store', branchId, query });
+    if (!result.success) return { section: '', status: `GrocerAI memory recall failed: ${result.error || 'service unavailable'}.`, recalled: [] };
+    const recalled = result.memories.map(memory => memory.content);
+    return recalled.length
+      ? { section: `\nPAST STORE OPERATIONAL EXPERIENCES & LESSONS (GrocerAI Memory):\n${result.context}\n`, status: '', recalled }
+      : { section: '', status: 'No relevant stored operational memories were found.', recalled: [] };
+  } catch (error: any) {
+    return { section: '', status: `GrocerAI memory recall failed: ${error?.message || 'service unavailable'}.`, recalled: [] };
+  }
+}
 
 export class GroqStoreAgentServer {
   private getApiKey(): string | undefined {
@@ -48,47 +62,26 @@ export class GroqStoreAgentServer {
     const queues = storeAgentTools.getCheckoutQueueStatus();
 
     // 2b. Recall Experiential Memories from Hindsight Store Bank (Section 12, 13)
-    let storeMemorySection = '';
-    let recalledMemoriesList: string[] = [];
-    let storeMemoryStatus = '';
-    try {
-      const hsRecall = await hindsightService.recallStoreMemories(input);
-      if (hsRecall.success && hsRecall.results.length > 0) {
-        const topMemories = hsRecall.results.slice(0, 4);
-        recalledMemoriesList = topMemories.map(r => r.text);
-        const reflection = await hindsightService.reflect(
-          hindsightService.getStoreBank(),
-          input,
-          { context: `Current telemetry: ${JSON.stringify({ outOfStock: outOfStock.map(p => p.productName), lowStock: lowStock.map(p => ({ productName: p.productName, currentQuantity: p.currentQuantity, reorderThreshold: p.reorderThreshold })), congestedCounters: queues.congestedCounters })}. Recalled evidence: ${recalledMemoriesList.join(' | ')}` }
-        );
-        storeMemorySection = `\nPAST STORE OPERATIONAL EXPERIENCES & LESSONS (Hindsight Store Memory):\n` +
-          topMemories.map(r => `- ${r.text}`).join('\n') +
-          (reflection.success ? `\nHINDSIGHT REFLECTION (generated inference; check against current telemetry): ${reflection.answer}` : '') + '\n';
-      } else if (!hsRecall.success) {
-        storeMemoryStatus = `Hindsight recall failed: ${hsRecall.error || 'service unavailable'}.`;
-      } else {
-        storeMemoryStatus = 'Hindsight recall succeeded but returned no relevant memories.';
-      }
-    } catch (err: any) {
-      storeMemoryStatus = `Hindsight recall failed: ${err?.message || 'service unavailable'}.`;
-      console.warn('[StoreAgent] Hindsight store memory recall failed gracefully:', err?.message || err);
-    }
+    const storeMemory = await loadStoreMemoryContext(input);
+    const storeMemorySection = storeMemory.section;
+    const recalledMemoriesList = storeMemory.recalled;
+    const storeMemoryStatus = storeMemory.status;
 
     // Compact, high-signal system prompt
     const systemPrompt = `You are the GrocerAI Store Agent, an autonomous physical supermarket operational intelligence system for store BRANCH-104.
 You converse with store managers to monitor store performance, inventory deficits, queue delays, and recommend operational actions.
 STORE TELEMETRY:
 - Status: ${overview.storeStatus}
-- Products: ${overview.totalProducts} | Total Units: ${overview.totalInventoryUnits} | Inventory Value: ₹${overview.inventoryValue.toLocaleString()}
+- Products: ${overview.totalProducts} | Total Units: ${overview.totalInventoryUnits} | Inventory Value: â‚¹${overview.inventoryValue.toLocaleString()}
 - Out of Stock: ${outOfStock.length} items (${outOfStock.map(i => i.productName).join(', ') || 'None'})
 - Low Stock: ${lowStock.length} items (${lowStock.map(i => `${i.productName}: ${i.currentQuantity}/${i.reorderThreshold}`).join(', ') || 'None'})
-- Congested Queues: ${queues.congestedCounters} counter(s)${storeMemorySection}${storeMemoryStatus ? `\nHINDSIGHT MEMORY STATUS: ${storeMemoryStatus} Do not claim prior store outcomes or lessons unless they appear in recalled Hindsight evidence. Treat current inventory and telemetry as the only source of operational truth.` : ''}
+- Congested Queues: ${queues.congestedCounters} counter(s)${storeMemorySection}${storeMemoryStatus ? `\nMEMORY STATUS: ${storeMemoryStatus} Do not claim prior store outcomes or lessons unless they appear in retrieved memory evidence. Treat current inventory and telemetry as the only source of operational truth.` : ''}
 RULES:
 1. ALWAYS call tools to retrieve authoritative data. Never invent inventory numbers, revenue, or customer demands.
 2. DISTINGUISH FUNNEL LEVELS: Search != View != Cart Add != Checkout != Confirmed Sale. Only confirmed orders are sales. Unfulfilled demand represents lost demand from stockouts or missing products.
 3. For restock or action inquiries, call generateRestockRecommendation or generateStoreRecommendations. Present evidence: stock vs threshold, confirmed sales, unfulfilled demand.
 4. Keep answers professional, crisp, and actionable. Provide bullet points and concrete metrics.
-5. LEARNING CURVE & PAST OUTCOMES: When recommending restocks or operational adjustments, use only relevant recalled operational experiences. Adjust a recommendation based on a prior outcome only when that outcome is present in the retrieved Hindsight evidence, and cite the evidence accurately.`;
+5. LEARNING CURVE & PAST OUTCOMES: When recommending operational adjustments, use only relevant recalled GrocerAI memories and distinguish recorded outcomes from deterministic reflections.`;
 
     const messages: Array<{ role: 'system' | 'user' | 'assistant' | 'tool'; content?: string; tool_calls?: any[]; tool_call_id?: string; name?: string }> = [
       { role: 'system', content: systemPrompt }
@@ -380,3 +373,6 @@ RULES:
 }
 
 export const groqStoreAgentServer = new GroqStoreAgentServer();
+
+
+

@@ -202,7 +202,7 @@ export const EmployeeDashboardPage: React.FC = () => {
       localStorage.setItem('grocer_active_emergency_dispatch', JSON.stringify(updated));
       setEmergencyDispatch(updated);
 
-      // Trigger JARVIS callback to manager mobile!
+      // Trigger Alexa+ callback to manager mobile!
       jarvisEmergencyCallService.notifyEmployeeHandled();
     } catch (e) {
       console.error('Failed to resolve emergency dispatch:', e);

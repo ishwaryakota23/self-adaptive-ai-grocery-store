@@ -1,7 +1,7 @@
 /**
  * GrocerAI EchoGuard & Barge-In Service
  * 
- * Prevents SpeechRecognition from transcribing JARVIS's own SpeechSynthesis audio
+ * Prevents SpeechRecognition from transcribing Alexa+'s own SpeechSynthesis audio
  * through microphone acoustic feedback loops, while allowing genuine user
  * speech interruptions (barge-in) to cleanly stop TTS and process commands.
  */
@@ -39,7 +39,7 @@ export class EchoGuard {
   }
 
   /**
-   * Called whenever JARVIS starts speaking via SpeechSynthesis
+   * Called whenever Alexa+ starts speaking via SpeechSynthesis
    */
   public onSpeechStart(text: string): string {
     const normalized = this.normalize(text);
@@ -65,7 +65,7 @@ export class EchoGuard {
   }
 
   /**
-   * Called whenever JARVIS finishes speaking or SpeechSynthesis.cancel() is executed
+   * Called whenever Alexa+ finishes speaking or SpeechSynthesis.cancel() is executed
    */
   public onSpeechEnd(id?: string) {
     this.isSpeaking = false;
@@ -92,7 +92,7 @@ export class EchoGuard {
   }
 
   /**
-   * Checks whether incoming candidate transcript is acoustic echo from JARVIS's own speakers
+   * Checks whether incoming candidate transcript is acoustic echo from Alexa+'s own speakers
    */
   public isEcho(candidateTranscript: string): boolean {
     const normCandidate = this.normalize(candidateTranscript);
@@ -106,7 +106,7 @@ export class EchoGuard {
       'view', 'feed', 'camera', 'do it', 'show cctv', 'open cctv', 'open surveillance'
     ]);
 
-    // Fast-path: When JARVIS is NOT speaking, immediately allow intent/affirmation responses
+    // Fast-path: When Alexa+ is NOT speaking, immediately allow intent/affirmation responses
     if (!this.isSpeaking) {
       if (
         managerIntentWords.has(normCandidate) ||
@@ -122,7 +122,7 @@ export class EchoGuard {
       }
     }
 
-    // 1. WHILE JARVIS IS SPEAKING:
+    // 1. WHILE ALEXA+ IS SPEAKING:
     // Any incoming audio from the microphone that is NOT an explicit barge-in keyword
     // is acoustic feedback from the computer speakers.
     if (this.isSpeaking) {
@@ -175,7 +175,7 @@ export class EchoGuard {
 
   /**
    * Identifies if incoming speech during TTS playback is a genuine, intentional user barge-in interruption.
-   * Only explicit user interruption keywords (e.g. "stop", "wait", "hold on", "cancel", "hey jarvis")
+   * Only explicit user interruption keywords (e.g. "stop", "wait", "hold on", "cancel", "hey alexa")
    * trigger interruption. Acoustic speaker bleed is never treated as barge-in.
    */
   public isBargeInInterruption(candidateTranscript: string): boolean {
@@ -187,7 +187,7 @@ export class EchoGuard {
     // Explicit intentional user interruption keywords:
     const intentionalBargeInKeywords = [
       'stop', 'wait', 'hold on', 'cancel', 'pause', 'quiet',
-      'shut up', 'hey jarvis', 'jarvis', 'listen', 'stop talking',
+      'shut up', 'hey alexa', 'alexa', 'alexa plus', 'listen', 'stop talking',
       'stop speaking', 'hold up', 'shh', 'silence', 'enough'
     ];
 

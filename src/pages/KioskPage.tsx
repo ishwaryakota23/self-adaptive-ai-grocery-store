@@ -760,7 +760,7 @@ export const KioskPage: React.FC<KioskPageProps> = ({ initialScreen, isCustomerE
   const total = authCartCalc.total;
 
   // -------------------------------------------------------------------------
-  // 1. DORMANT / STANDBY SCREEN FOR KIOSK 3 (UNTIL MANAGER JARVIS ACTIVATES)
+  // 1. DORMANT / STANDBY SCREEN FOR KIOSK 3 (UNTIL MANAGER VOICE ACTIVATION)
   // -------------------------------------------------------------------------
   if (kioskId === 'KIOSK_03' && remoteKioskStatus === 'STANDBY') {
     return (
@@ -810,7 +810,7 @@ export const KioskPage: React.FC<KioskPageProps> = ({ initialScreen, isCustomerE
               <span>Listening for Manager Spoken Authorization</span>
             </div>
             <p className="text-[11px] text-slate-600">
-              Terminal will activate automatically when Store Manager requests via JARVIS.
+              Terminal will activate automatically when the Store Manager requests activation by voice.
             </p>
           </div>
         </main>
@@ -825,7 +825,7 @@ export const KioskPage: React.FC<KioskPageProps> = ({ initialScreen, isCustomerE
   }
 
   // -------------------------------------------------------------------------
-  // 2. ACTIVATING SCREEN: CIRCULAR JARVIS ORB ANNOUNCEMENT (SECTION 8)
+  // 2. ACTIVATING SCREEN: VOICE ANNOUNCEMENT (SECTION 8)
   // -------------------------------------------------------------------------
   if (remoteKioskStatus === 'ACTIVATING') {
     return (

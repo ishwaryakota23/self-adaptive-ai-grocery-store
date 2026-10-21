@@ -1,4 +1,4 @@
-import { hindsightService } from './hindsightService.js';
+﻿import { memoryService } from './nativeMemoryService.js';
 import { db } from './db.js';
 import { Product } from '../types/index.js';
 
@@ -33,7 +33,7 @@ export interface AdaptiveExperienceTrace {
   businessImpact: {
     metric: string;
     value: string;
-    financialImpact?: string; // e.g. "₹2,850 recovered sales", "14.5 employee hours saved"
+    financialImpact?: string; // e.g. "â‚¹2,850 recovered sales", "14.5 employee hours saved"
     hoursSaved?: number;
   };
   financialImpact?: {
@@ -114,7 +114,7 @@ class HindsightEngine {
 
     const qty = nextStep === 1 ? 30 : nextStep === 2 ? 38 : nextStep === 3 ? 44 : 42;
     const prevOutcome = nextStep === 2
-      ? 'Week 1 Baseline: 30 units stocked out in 42m; 18 unmet requests (~₹1,450 lost sales).'
+      ? 'Week 1 Baseline: 30 units stocked out in 42m; 18 unmet requests (~â‚¹1,450 lost sales).'
       : nextStep === 3
       ? 'Week 2 Adjustment: 38 units (+26%) delayed stockout to 7:15 PM; 4 unmet requests.'
       : nextStep === 4
@@ -149,14 +149,14 @@ class HindsightEngine {
       agentName: 'Customer Agent',
       title: 'Customer Product Preference: Artisanal Sourdough vs Whole Wheat',
       scenarioType: 'PRODUCT_PREFERENCE',
-      pastSituation: 'Customer started a bakery breakfast mission. Agent recommended default high-volume Whole Wheat Bread (₹45).',
+      pastSituation: 'Customer started a bakery breakfast mission. Agent recommended default high-volume Whole Wheat Bread (â‚¹45).',
       pastDecision: 'Ranked Whole Wheat Bread #1 based on universal popularity.',
-      pastHumanAction: 'Customer ignored Whole Wheat Bread and explicitly selected Artisanal Sourdough (₹65) across 2 consecutive shopping trips.',
+      pastHumanAction: 'Customer ignored Whole Wheat Bread and explicitly selected Artisanal Sourdough (â‚¹65) across 2 consecutive shopping trips.',
       actualOutcome: 'Demonstrated positive affinity for Artisanal Sourdough; rejected default whole wheat.',
       outcomeType: 'POSITIVE',
       businessImpact: {
         metric: 'Basket Value Uplift',
-        value: '+₹20/basket',
+        value: '+â‚¹20/basket',
         financialImpact: '+44% higher category transaction value'
       },
       retainedLesson: 'Customer demonstrates consistent preference for artisanal sourdough over standard whole wheat; elevate sourdough relevance in future breakfast missions.',
@@ -166,13 +166,13 @@ class HindsightEngine {
       previousBehavior: 'Recommend universal baseline: Whole Wheat Bread ranked #1.',
       currentDecision: 'Artisanal Sourdough dynamically prioritized as #1 personalized recommendation. Whole Wheat shifted to secondary option. Customer must still explicitly click to add.',
       whyThisDecision: 'Demonstrated repeat selection pattern (2 prior instances) overrides universal popularity baseline.',
-      differenceDescription: 'Recommendation priority inverted: Artisanal Sourdough relevance score boosted from 0.62 → 0.96 (+55%).',
+      differenceDescription: 'Recommendation priority inverted: Artisanal Sourdough relevance score boosted from 0.62 â†’ 0.96 (+55%).',
       progressionSteps: [
         {
           step: 1,
           iterationLabel: 'Visit 1 (Baseline)',
           policyValue: 'Recommend Whole Wheat (#1)',
-          measuredOutcome: 'Customer manually searched and bought Sourdough (₹65)',
+          measuredOutcome: 'Customer manually searched and bought Sourdough (â‚¹65)',
           takeaway: 'First positive choice signal recorded',
           status: 'completed'
         },
@@ -196,16 +196,16 @@ class HindsightEngine {
       ]
     });
 
-    // Scenario 2: Recommendation Rejected (Negative Outcome Learning — Avocado Oil vs Mustard Oil)
+    // Scenario 2: Recommendation Rejected (Negative Outcome Learning â€” Avocado Oil vs Mustard Oil)
     this.traces.set('CUST_REJECT_AVOCADO_OIL', {
       id: 'CUST_REJECT_AVOCADO_OIL',
       domain: 'CUSTOMER',
       agentName: 'Customer Agent',
       title: 'Negative Feedback Learning: Suppressing Rejected Recommendations',
       scenarioType: 'RECOMMENDATION_REJECTED',
-      pastSituation: 'Customer browsed Cooking Oils category. Agent repeatedly promoted high-margin Imported Avocado Oil (₹450).',
+      pastSituation: 'Customer browsed Cooking Oils category. Agent repeatedly promoted high-margin Imported Avocado Oil (â‚¹450).',
       pastDecision: 'Pushed Avocado Oil 3 times as "Top Pick".',
-      pastHumanAction: 'Customer dismissed Avocado Oil every time, choosing Cold-Pressed Mustard Oil (₹180) instead.',
+      pastHumanAction: 'Customer dismissed Avocado Oil every time, choosing Cold-Pressed Mustard Oil (â‚¹180) instead.',
       actualOutcome: 'Repeated negative interaction: customer clearly does not want avocado oil.',
       outcomeType: 'NEGATIVE',
       businessImpact: {
@@ -225,7 +225,7 @@ class HindsightEngine {
         {
           step: 1,
           iterationLabel: 'Attempt 1',
-          policyValue: 'Promote Avocado Oil (₹450)',
+          policyValue: 'Promote Avocado Oil (â‚¹450)',
           measuredOutcome: 'Ignored by customer',
           takeaway: 'Initial negative signal',
           status: 'completed'
@@ -234,7 +234,7 @@ class HindsightEngine {
           step: 2,
           iterationLabel: 'Attempt 2',
           policyValue: 'Promote Avocado Oil with 10% discount badge',
-          measuredOutcome: 'Explicitly dismissed; customer bought Mustard Oil (₹180)',
+          measuredOutcome: 'Explicitly dismissed; customer bought Mustard Oil (â‚¹180)',
           takeaway: 'Confirmed cuisine mismatch; Hindsight retains suppression directive',
           status: 'completed'
         },
@@ -265,7 +265,7 @@ class HindsightEngine {
       businessImpact: {
         metric: 'Stockout Abandonment Prevented',
         value: '100% sale captured',
-        financialImpact: '₹240 purchase preserved'
+        financialImpact: 'â‚¹240 purchase preserved'
       },
       retainedLesson: 'True Elements Rolled Oats is a verified acceptable substitute for Organic Tattva Oats for this shopper. Prioritize it immediately during future stockouts.',
       hindsightDocumentId: 'hindsight-cust-sub-oats-03',
@@ -356,11 +356,11 @@ class HindsightEngine {
       pastSituation: 'Sunday evening rush (5 PM - 8 PM) regularly experiences +45% surge in Organic Whole Milk demand.',
       pastDecision: 'Historical baseline policy allocated 30 units per shelf restock cycle.',
       pastHumanAction: 'Manager approved 30 units. Stock was completely depleted in 42 minutes.',
-      actualOutcome: 'Critical stockout: 18 unfulfilled customer requests logged; estimated ₹1,450 lost sales.',
+      actualOutcome: 'Critical stockout: 18 unfulfilled customer requests logged; estimated â‚¹1,450 lost sales.',
       outcomeType: 'NEGATIVE',
       businessImpact: {
         metric: 'Stockout Loss Recovered',
-        value: '₹2,850/week recovered',
+        value: 'â‚¹2,850/week recovered',
         financialImpact: '0% stockouts achieved'
       },
       retainedLesson: 'Sunday evening demand exceeds 30-unit allocation by ~40%. Calibrate restock target incrementally using actual sales depletion velocity.',
@@ -369,15 +369,15 @@ class HindsightEngine {
       currentContext: 'Store Agent evaluates inventory replenishment for Sunday afternoon shift ahead of evening rush.',
       previousBehavior: 'Default replenishment policy: 30 units.',
       currentDecision: 'Policy converged to exactly 42 units. Covers 100% of peak demand without Monday residual waste.',
-      whyThisDecision: 'Multi-iteration outcome learning converged policy: 30 (severe stockout) → 38 (mild stockout) → 44 (slight overstock) → 42 (optimal demand coverage).',
-      differenceDescription: 'Restock recommendation increased from 30 → 42 units (+40%), backed by 3 iterations of measured sales data.',
+      whyThisDecision: 'Multi-iteration outcome learning converged policy: 30 (severe stockout) â†’ 38 (mild stockout) â†’ 44 (slight overstock) â†’ 42 (optimal demand coverage).',
+      differenceDescription: 'Restock recommendation increased from 30 â†’ 42 units (+40%), backed by 3 iterations of measured sales data.',
       progressionSteps: [
         {
           step: 1,
           iterationLabel: 'Week 1 (Baseline)',
           policyValue: '30 units',
           quantityProposed: 30,
-          measuredOutcome: 'Stockout at 5:42 PM; 18 unmet requests; ₹1,450 lost sales',
+          measuredOutcome: 'Stockout at 5:42 PM; 18 unmet requests; â‚¹1,450 lost sales',
           takeaway: 'Under-allocation detected; surge exceeds capacity by ~40%',
           status: 'completed'
         },
@@ -422,13 +422,13 @@ class HindsightEngine {
       scenarioType: 'CHECKOUT_QUEUE_PREEMPTION',
       pastSituation: 'Sunday 6:30 PM: Counter 1 queue reached 7.4 minutes wait with 8 customers in line.',
       pastDecision: 'Agent waited until wait time exceeded 5-minute SLA before proposing Counter 2.',
-      pastHumanAction: 'Manager approved Counter 2 opening. Queue wait dropped from 7.4m → 2.1m.',
+      pastHumanAction: 'Manager approved Counter 2 opening. Queue wait dropped from 7.4m â†’ 2.1m.',
       actualOutcome: 'Significant customer satisfaction recovery, but 8 customers experienced 7m+ delay before action took effect.',
       outcomeType: 'POSITIVE',
       businessImpact: {
         metric: 'Queue SLA Compliance',
         value: '98.5% compliance',
-        financialImpact: 'Average wait dropped from 7.4m → 2.1m'
+        financialImpact: 'Average wait dropped from 7.4m â†’ 2.1m'
       },
       retainedLesson: 'Opening Counter 2 successfully resolves checkout surges. However, waiting for SLA breach is suboptimal: trigger Counter 2 opening preemptively when estimated wait exceeds 3.2 mins before 5m breach.',
       hindsightDocumentId: 'hindsight-store-queue-express-06',
@@ -510,7 +510,7 @@ class HindsightEngine {
     // 3. SECURITY AGENT ADAPTIVE SCENARIOS
     // =========================================================================
 
-    // Scenario 8: Repeated Shelf Visits (False Positive Learning — Comparison Shopping)
+    // Scenario 8: Repeated Shelf Visits (False Positive Learning â€” Comparison Shopping)
     this.traces.set('SEC_FALSE_POSITIVE_SHELF', {
       id: 'SEC_FALSE_POSITIVE_SHELF',
       domain: 'SECURITY',
@@ -570,7 +570,7 @@ class HindsightEngine {
       outcomeType: 'CONFIRMED_INCIDENT',
       businessImpact: {
         metric: 'Shrinkage Loss Prevented',
-        value: '₹3,200 recovered',
+        value: 'â‚¹3,200 recovered',
         financialImpact: 'High-confidence detection verified'
       },
       retainedLesson: 'Multi-signal combination (product transfer into clothing + rapid exit trajectory) is a verified high-confidence pattern (>95% confirmed incidents). Prioritize immediate courteous verification.',
@@ -617,7 +617,7 @@ class HindsightEngine {
       businessImpact: {
         metric: 'Zero-Friction Loss Prevention',
         value: '100% payments captured',
-        financialImpact: '₹85 captured without confrontation'
+        financialImpact: 'â‚¹85 captured without confrontation'
       },
       retainedLesson: 'Checkout discrepancies are benign self-correction opportunities 92% of the time. Never frame as security violation; preserve customer dignity with seamless 1-tap cart addition.',
       hindsightDocumentId: 'hindsight-sec-checkout-benign-10',
@@ -695,7 +695,7 @@ class HindsightEngine {
       if (sessions.length > 0) return true;
 
       // Check past recalled memories
-      if (hindsightService.hasCustomerMemories(customerId)) return true;
+      if (memoryService.hasCustomerMemories(customerId)) return true;
     } catch {
       // safe fallback
     }
@@ -737,16 +737,16 @@ class HindsightEngine {
       if (hasDietaryCustomizations) {
         if (dietaryPrefs.some((d: string) => d.includes('vegan')) && pTags.includes('vegan')) {
           score += 0.45;
-          reasonBadge = '🌱 Matches your Vegan preference';
+          reasonBadge = 'ðŸŒ± Matches your Vegan preference';
         } else if (dietaryPrefs.some((d: string) => d.includes('protein')) && (pTags.includes('high protein') || pTags.includes('protein'))) {
           score += 0.40;
-          reasonBadge = '💪 Matches your High Protein preference';
+          reasonBadge = 'ðŸ’ª Matches your High Protein preference';
         } else if (dietaryPrefs.some((d: string) => d.includes('organic')) && prod.is_organic) {
           score += 0.35;
-          reasonBadge = '🌿 Matches your Organic preference';
+          reasonBadge = 'ðŸŒ¿ Matches your Organic preference';
         } else if (dietaryPrefs.some((d: string) => d.includes('sugar') || d.includes('unsweetened')) && pName.includes('greek yogurt') && !pName.includes('strawberry')) {
           score += 0.50;
-          reasonBadge = '🎯 Matches your plain unsweetened requirement';
+          reasonBadge = 'ðŸŽ¯ Matches your plain unsweetened requirement';
         }
       }
 
@@ -755,7 +755,7 @@ class HindsightEngine {
         // Sourdough preference (Customer explicit choice history)
         if (pName.includes('sourdough')) {
           score += 0.85;
-          reasonBadge = '⭐ Hindsight: Preferred Choice (Artisan Sourdough)';
+          reasonBadge = 'â­ Hindsight: Preferred Choice (Artisan Sourdough)';
           adaptationTrace = this.traces.get('CUST_PREF_SOURDOUGH');
         } else if (pName.includes('white bread') || pName.includes('whole wheat bread') || pName.includes('brown bread')) {
           score -= 0.15;
@@ -764,44 +764,44 @@ class HindsightEngine {
         // Avocado Oil rejection penalty (Negative feedback learning: 3 consecutive rejections)
         if (pName.includes('avocado')) {
           score -= 0.90;
-          reasonBadge = '⬇️ Hindsight: Deprioritized (Rejected 3x per your feedback: "Too expensive")';
+          reasonBadge = 'â¬‡ï¸ Hindsight: Deprioritized (Rejected 3x per your feedback: "Too expensive")';
           isDeprioritized = true;
           adaptationTrace = this.traces.get('CUST_REJECT_AVOCADO_OIL');
         } else if (pName.includes('mustard oil')) {
           score += 0.35;
-          reasonBadge = '⭐ Preferred cooking oil in past orders';
+          reasonBadge = 'â­ Preferred cooking oil in past orders';
         }
 
         // Oats substitute (Accepted substitution)
         if (pName.includes('true elements') || pName.includes('oats')) {
           score += 0.40;
-          reasonBadge = '🔄 Hindsight: Verified Accepted Substitute (Rolled Oats)';
+          reasonBadge = 'ðŸ”„ Hindsight: Verified Accepted Substitute (Rolled Oats)';
           adaptationTrace = this.traces.get('CUST_SUBSTITUTE_OATS');
         }
 
         // Plain Greek yogurt explicit correction
         if (pName.includes('greek yogurt') && !pName.includes('strawberry') && !pName.includes('mango')) {
           score += 0.50;
-          if (!reasonBadge) reasonBadge = '🎯 Matches your plain unsweetened requirement';
+          if (!reasonBadge) reasonBadge = 'ðŸŽ¯ Matches your plain unsweetened requirement';
           adaptationTrace = this.traces.get('CUST_EXPLICIT_CORRECTION');
         } else if (pName.includes('yogurt') && (pName.includes('strawberry') || pName.includes('sweet') || pName.includes('flavored'))) {
           score -= 0.80;
           isDeprioritized = true;
-          reasonBadge = '🚫 Filtered: You requested no sweetened dairy';
+          reasonBadge = 'ðŸš« Filtered: You requested no sweetened dairy';
         }
 
         // Dynamic customer memory recall from Hindsight bank
         try {
-          const custMemories = hindsightService.getCustomerMemoriesForQuery(customerId, pName, 2);
+          const custMemories = memoryService.getCustomerMemoriesForQuery(customerId, pName, 2);
           for (const m of custMemories) {
             const mLower = m.text.toLowerCase();
             if (mLower.includes('prefer') || mLower.includes('like') || mLower.includes('istam') || mLower.includes('sourdough')) {
               score += 0.40;
-              if (!reasonBadge) reasonBadge = '⭐ Preferred Choice per your past purchases';
+              if (!reasonBadge) reasonBadge = 'â­ Preferred Choice per your past purchases';
             } else if (mLower.includes('reject') || mLower.includes('dislike') || mLower.includes('expensive') || mLower.includes('nachaledu') || mLower.includes('avocado')) {
               score -= 0.60;
               isDeprioritized = true;
-              if (!reasonBadge) reasonBadge = '⬇️ Deprioritized per your feedback';
+              if (!reasonBadge) reasonBadge = 'â¬‡ï¸ Deprioritized per your feedback';
             }
           }
         } catch {
@@ -866,7 +866,7 @@ class HindsightEngine {
             '38 units (Iteration 1: +8 Shortage Delta Adjusted)'
           ],
           adaptationTrace: trace,
-          reasoning: 'Store Hindsight recalled Week 1 stockout: 30 units depleted in 42m with 18 unmet requests (~₹1,450 lost sales). Shortage delta (+8 units) applied -> 38 units.',
+          reasoning: 'Store Hindsight recalled Week 1 stockout: 30 units depleted in 42m with 18 unmet requests (~â‚¹1,450 lost sales). Shortage delta (+8 units) applied -> 38 units.',
           rationale: 'Shortage delta from Week 1 outcome (+8 units) -> Recommending 38 units (+26%).',
           confidence: 0.92,
           convergenceStep: 2
@@ -977,7 +977,7 @@ class HindsightEngine {
       const trace = this.traces.get('SEC_CHECKOUT_BENIGN_CORRECTION')!;
       return {
         assessmentLevel: 'MEDIUM',
-        title: 'Checkout Quantity Discrepancy — Benign Self-Correction Pathway',
+        title: 'Checkout Quantity Discrepancy â€” Benign Self-Correction Pathway',
         reasoning: 'Hindsight experiential memory confirms 92% of checkout mismatches are accidental scanning oversights that resolve smoothly when presented with an empowering 1-tap self-correction prompt.',
         action: 'Display polite non-accusatory self-correction dialog on customer checkout terminal.',
         adaptationTrace: trace,
@@ -997,7 +997,7 @@ class HindsightEngine {
       const trace = this.traces.get('SEC_FALSE_POSITIVE_SHELF')!;
       return {
         assessmentLevel: 'BENIGN',
-        title: 'Normal Comparison Shopping — False Positive Escalation Suppressed',
+        title: 'Normal Comparison Shopping â€” False Positive Escalation Suppressed',
         reasoning: 'Hindsight history demonstrates that repeated shelf lingering alone without concealment is benign comparison shopping 80% of the time (e.g. reading allergy labels). Standalone alert escalation suppressed to eliminate responder fatigue.',
         action: 'Log as normal comparison shopping. Zero audible chime; zero employee dispatch.',
         adaptationTrace: trace,
@@ -1056,7 +1056,7 @@ class HindsightEngine {
         metric3: { label: 'Peak Queue Wait Reduction', value: '2.1 mins', change: '-71% wait time', positive: true },
         roiImpact: {
           label: 'Recovered Sales Throughput',
-          value: '₹18,500 / week',
+          value: 'â‚¹18,500 / week',
           note: 'Measured revenue from eliminated Sunday stockouts & queue preemption'
         },
         stockoutDropPercentage: 0.85,
@@ -1081,3 +1081,5 @@ class HindsightEngine {
 }
 
 export const hindsightEngine = new HindsightEngine();
+
+

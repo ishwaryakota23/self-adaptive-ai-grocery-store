@@ -193,7 +193,7 @@ class JarvisEmergencyCallService {
     this.startCallTimer();
     this.notify();
 
-    // JARVIS speaks greeting
+    // Alexa+ speaks greeting
     return voiceService.speak("Hey Manager.", "en", "MANAGER_EMERGENCY_LINE").then(() => {
       this.currentContext.isJarvisSpeaking = false;
       this.notify();
@@ -201,7 +201,7 @@ class JarvisEmergencyCallService {
   }
 
   /**
-   * Step 2: Manager asks / responds "What's up JARVIS?"
+   * Step 2: Manager asks / responds "What's up Alexa?"
    */
   public managerAskWhatsUp(): Promise<void> {
     this.currentContext.dialogueStep = 2;
@@ -324,8 +324,8 @@ class JarvisEmergencyCallService {
                       lower.includes("what happened") || lower.includes("what is going on") || lower.includes("what's going on") || 
                       lower.includes("what is it") || lower.includes("why are you calling") || lower.includes("why call") || 
                       lower.includes("tell me") || lower.includes("report") || lower.includes("issue") || 
-                      lower.includes("alert") || lower.includes("incident") || lower.includes("hey jarvis") || 
-                      lower.includes("jarvis") || lower.includes("yes") || lower.includes("hello") || 
+                      lower.includes("alert") || lower.includes("incident") || lower.includes("hey alexa") ||
+                      lower.includes("alexa") || lower.includes("yes") || lower.includes("hello") ||
                       lower.includes("hi") || lower.includes("ఏంటి") || lower.includes("ఏమైంది") || 
                       lower.includes("చెప్పు") || lower.includes("क्या हुआ") || lower.includes("बताओ");
 

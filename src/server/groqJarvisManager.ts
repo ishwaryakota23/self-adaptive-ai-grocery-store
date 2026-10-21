@@ -1,9 +1,9 @@
-declare const process: any;
+﻿declare const process: any;
 
 import { db } from '../services/db.js';
 import { storeAgentTools } from '../services/storeAgentTools.js';
 import { cctvManifestService } from '../services/cctvManifestService.js';
-import { hindsightService } from '../services/hindsightService.js';
+import { memoryService } from '../services/nativeMemoryService.js';
 import { roiEngine } from '../services/roiEngine.js';
 
 export interface JarvisManagerRequest {
@@ -122,18 +122,18 @@ export class GroqJarvisManagerServer {
     const model = this.getModel();
 
     // 3. Construct System Prompt grounded in actual live data
-    const systemPrompt = `You are JARVIS, the Store Manager's executive voice assistant and supervisory interface for GrocerAI Supermarket Branch #104.
+    const systemPrompt = `You are GrocerAI's store-operations voice assistant and supervisory interface for GrocerAI Supermarket Branch #104.
 You converse naturally with the human store manager via voice speech.
 
 ACTUAL LIVE STORE DATA:
-- Store Status: ${overview.storeStatus} | Total Products: ${overview.totalProducts} | Inventory Value: ₹${overview.inventoryValue.toLocaleString()}
-- Sales Today: ₹1,24,560 across 415 orders (+12% vs yesterday) | Footfall: 842 shoppers
+- Store Status: ${overview.storeStatus} | Total Products: ${overview.totalProducts} | Inventory Value: â‚¹${overview.inventoryValue.toLocaleString()}
+- Sales Today: â‚¹1,24,560 across 415 orders (+12% vs yesterday) | Footfall: 842 shoppers
 - Active Stockouts: ${overview.outOfStockProductsCount} (${overview.outOfStockProductsCount > 0 ? 'Amul Taaza Milk 500ml in Aisle 1' : 'None'})
 - Verification Kiosks: Kiosks 1-4 active. Average wait: 2.3m. ${queues.some(q => q.status === 'congested' || q.estimated_wait_mins > 3) ? 'Kiosk 3 congested (~5.2m wait).' : 'All queues flowing smoothly.'}
 - Security Sentinel: ${openSecEvents.length} open events. Top event: ${topSecEvent ? `${topSecEvent.details} (Camera 4 / CAM-04B at 14:32 in Aisle 2, High Severity)` : 'All camera feeds normal'}.
 - Store Hindsight: Converged Sunday milk restock policy from baseline 30 to 42 units (zero stockouts, zero spoilage). Customer Agent learned Sourdough positive preference. Security Agent suppressed isolated shelf linger alert to 0.18 risk.
-- ROI Engine: Net business impact today is ${roiSummary.netBusinessImpact.formattedValue}. Amul Taaza Milk 42 units expected gross opportunity was ₹1,470 minus ₹380 costs = ₹1,090 realized net impact.
-- Active Pending Question Context: ${pendingContextQuestion ? `JARVIS previously asked: "${pendingContextQuestion}"` : 'None (No active confirmation prompt)'}
+- ROI Engine: Net business impact today is ${roiSummary.netBusinessImpact.formattedValue}. Amul Taaza Milk 42 units expected gross opportunity was â‚¹1,470 minus â‚¹380 costs = â‚¹1,090 realized net impact.
+- Active Pending Question Context: ${pendingContextQuestion ? `The assistant previously asked: "${pendingContextQuestion}"` : 'None (No active confirmation prompt)'}
 
 BEHAVIOR RULES:
 1. NATURAL HUMAN CONVERSATION: Be crisp, natural, professional, and conversational (2-4 sentences max spoken). No markdown asterisks, no robotic lists.
@@ -148,7 +148,7 @@ BEHAVIOR RULES:
      Reply: "Store Agent converged to 42 units through a closed feedback loop across consecutive Sunday rush iterations: baseline 30 units stocked out in 42 minutes, while 44 units caused Monday spoilage. 42 units achieved the exact equilibrium of zero stockouts and zero waste."
      Set pendingContextQuestion: null
    - When asked "What was the outcome?" or "Did it save money?" or "What was the financial impact?":
-     Reply: "That decision performed with a realized net impact of ₹1,090 (Expected gross opportunity was ₹1,470 minus ₹380 procurement and handling costs). Store-wide today, interventions have delivered ₹14,820 in net business impact."
+     Reply: "That decision performed with a realized net impact of â‚¹1,090 (Expected gross opportunity was â‚¹1,470 minus â‚¹380 procurement and handling costs). Store-wide today, interventions have delivered â‚¹14,820 in net business impact."
      Set pendingContextQuestion: null
    - When asked "What changed because of Hindsight?":
      Reply: "Hindsight adapted all three agents: Customer Agent learned customer positive preference for Artisanal Sourdough; Store Agent converged Sunday milk restock from 30 to 42 units; and Security Agent calibrated shelf lingering risk from 0.72 down to 0.18 to eliminate false-positive fatigue."
@@ -234,7 +234,7 @@ BEHAVIOR RULES:
           cctvVideoId: 'cctv_001_shoplifting_jacket',
           securityEventId: topSecEvent?.id || 'EVT-SEC-CONCEAL-01',
           timestamp: '14:32',
-          focusNote: 'Camera 4 (CAM-04B) · High Severity Concealment at 14:32'
+          focusNote: 'Camera 4 (CAM-04B) Â· High Severity Concealment at 14:32'
         };
         actionCard = {
           type: 'VIEW_SURVEILLANCE',
@@ -278,7 +278,7 @@ BEHAVIOR RULES:
       const lowerInput = input.toLowerCase();
       if (lowerInput.includes('42 units') || lowerInput.includes('why 42') || lowerInput.includes('recommend 42')) {
         hindsightTrace = {
-          title: 'Sunday Evening Restock Policy Convergence (30 → 38 → 44 → 42 Units)',
+          title: 'Sunday Evening Restock Policy Convergence (30 â†’ 38 â†’ 44 â†’ 42 Units)',
           domain: 'STORE HINDSIGHT',
           lesson: 'Equilibrium reached: 42 units balance peak footfall demand with zero spoilage.',
           convergenceStep: 4,
@@ -293,15 +293,15 @@ BEHAVIOR RULES:
         hindsightTrace = {
           title: 'Cross-Domain Hindsight Adaptation Summary',
           domain: 'HINDSIGHT ENGINE',
-          lesson: 'Experience → Outcome → Hindsight Gated → Changed Future Decision across Customer, Store & Security.'
+          lesson: 'Experience â†’ Outcome â†’ Hindsight Gated â†’ Changed Future Decision across Customer, Store & Security.'
         };
       }
 
       if (lowerInput.includes('outcome') || lowerInput.includes('save money') || lowerInput.includes('roi') || lowerInput.includes('financial') || action === 'APPROVE_RESTOCK_42') {
         roiBreakdown = {
-          expectedBenefit: '₹1,470',
-          decisionCost: '₹380',
-          realizedImpact: '₹1,090',
+          expectedBenefit: 'â‚¹1,470',
+          decisionCost: 'â‚¹380',
+          realizedImpact: 'â‚¹1,090',
           discrepancyNote: 'Closed-loop realized outcome'
         };
       }
@@ -378,7 +378,7 @@ BEHAVIOR RULES:
             cctvCameraId: 'CAM-04B',
             cctvVideoId: 'cctv_001_shoplifting_jacket',
             timestamp: '14:32',
-            focusNote: 'Camera 4 (CAM-04B) · High Severity Concealment at 14:32'
+            focusNote: 'Camera 4 (CAM-04B) Â· High Severity Concealment at 14:32'
           },
           actionCard: {
             type: 'VIEW_SURVEILLANCE',
@@ -408,7 +408,7 @@ BEHAVIOR RULES:
         return {
           success: true,
           groqConfigured: false,
-          message: "Done. Restocking order of 42 units for Amul Taaza Milk has been approved with ₹1,090 realized net ROI impact.",
+          message: "Done. Restocking order of 42 units for Amul Taaza Milk has been approved with â‚¹1,090 realized net ROI impact.",
           pendingContextQuestion: null,
           actionCard: {
             type: 'APPROVE_RESTOCK',
@@ -457,7 +457,7 @@ BEHAVIOR RULES:
           cctvCameraId: 'CAM-04B',
           cctvVideoId: 'cctv_001_shoplifting_jacket',
           timestamp: '14:32',
-          focusNote: 'Camera 4 (CAM-04B) · High Severity Concealment at 14:32'
+          focusNote: 'Camera 4 (CAM-04B) Â· High Severity Concealment at 14:32'
         },
         actionCard: {
           type: 'VIEW_SURVEILLANCE',
@@ -599,7 +599,7 @@ BEHAVIOR RULES:
         message: "Store Agent converged to 42 units through a closed feedback loop across consecutive Sunday rush iterations: baseline 30 units stocked out in 42 minutes, while 44 units caused Monday spoilage. 42 units achieved the exact equilibrium of zero stockouts and zero waste. Should I approve the 42-unit restock now?",
         pendingContextQuestion: 'APPROVE_RESTOCK_42',
         hindsightTrace: {
-          title: 'Sunday Evening Restock Policy Convergence (30 → 38 → 44 → 42 Units)',
+          title: 'Sunday Evening Restock Policy Convergence (30 â†’ 38 â†’ 44 â†’ 42 Units)',
           domain: 'STORE HINDSIGHT',
           lesson: 'Equilibrium reached: 42 units balance peak footfall demand with zero spoilage.',
           convergenceStep: 4,
@@ -618,11 +618,11 @@ BEHAVIOR RULES:
       return {
         success: true,
         groqConfigured: false,
-        message: `That decision performed with a realized net impact of ₹1,090 (Expected gross opportunity was ₹1,470 minus ₹380 procurement and handling costs). Store-wide today, interventions have delivered ${ctx.roiSummary.netBusinessImpact.formattedValue} in net business impact.`,
+        message: `That decision performed with a realized net impact of â‚¹1,090 (Expected gross opportunity was â‚¹1,470 minus â‚¹380 procurement and handling costs). Store-wide today, interventions have delivered ${ctx.roiSummary.netBusinessImpact.formattedValue} in net business impact.`,
         roiBreakdown: {
-          expectedBenefit: '₹1,470',
-          decisionCost: '₹380',
-          realizedImpact: '₹1,090',
+          expectedBenefit: 'â‚¹1,470',
+          decisionCost: 'â‚¹380',
+          realizedImpact: 'â‚¹1,090',
           discrepancyNote: 'Closed-loop realized outcome'
         }
       };
@@ -637,7 +637,7 @@ BEHAVIOR RULES:
         hindsightTrace: {
           title: 'Cross-Domain Hindsight Adaptation Summary',
           domain: 'HINDSIGHT ENGINE',
-          lesson: 'Experience → Outcome → Hindsight Gated → Changed Future Decision across Customer, Store & Security.'
+          lesson: 'Experience â†’ Outcome â†’ Hindsight Gated â†’ Changed Future Decision across Customer, Store & Security.'
         }
       };
     }
@@ -652,3 +652,6 @@ BEHAVIOR RULES:
 }
 
 export const groqJarvisManagerServer = new GroqJarvisManagerServer();
+
+
+

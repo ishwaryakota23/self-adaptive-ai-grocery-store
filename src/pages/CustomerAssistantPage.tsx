@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Mic,
@@ -26,7 +26,7 @@ import { JarvisCustomerCommandCenter } from '../components/JarvisCustomerCommand
 import { customerAgent, CustomerAgentResponse } from '../services/customerAgent';
 import { voiceService } from '../services/voiceService';
 import { db } from '../services/db';
-import { hindsightService } from '../services/hindsightService';
+import { memoryService } from '../services/nativeMemoryService';
 import { hindsightEngine } from '../services/hindsightEngine';
 import { AdaptationTrace } from '../components/AdaptationTrace';
 import { SubstitutionRecord } from '../types/index.js';
@@ -51,6 +51,7 @@ export const CustomerAssistantPage: React.FC = () => {
     setLanguage,
     activeMission,
     updateMissionItemStatus,
+    cart,
     addToCart,
     products,
     setIsSessionQRModalOpen,
@@ -118,7 +119,7 @@ export const CustomerAssistantPage: React.FC = () => {
     const custId = currentCustomer.customer_id;
     setRecalledMemories([]);
     setMemoryRecallError('');
-    hindsightService.recall(hindsightService.getCustomerBank(custId), 'preferences diet organic habits')
+    memoryService.recall(memoryService.getCustomerBank(custId), 'preferences diet organic habits')
       .then(res => {
         if (res.success && res.results.length > 0) {
           setRecalledMemories(res.results.map(r => r.text.split('\n')[0]));
@@ -141,9 +142,9 @@ export const CustomerAssistantPage: React.FC = () => {
       const initResponse: CustomerAgentResponse = {
         message:
           language === 'hi'
-            ? 'नमस्ते! मैं समझ गया कि आप 4 लोगों के लिए पास्ता सामग्री खरीदना चाहते हैं। क्या आपको सॉस या पनीर भी चाहिए?'
+            ? 'à¤¨à¤®à¤¸à¥à¤¤à¥‡! à¤®à¥ˆà¤‚ à¤¸à¤®à¤ à¤—à¤¯à¤¾ à¤•à¤¿ à¤†à¤ª 4 à¤²à¥‹à¤—à¥‹à¤‚ à¤•à¥‡ à¤²à¤¿à¤ à¤ªà¤¾à¤¸à¥à¤¤à¤¾ à¤¸à¤¾à¤®à¤—à¥à¤°à¥€ à¤–à¤°à¥€à¤¦à¤¨à¤¾ à¤šà¤¾à¤¹à¤¤à¥‡ à¤¹à¥ˆà¤‚à¥¤ à¤•à¥à¤¯à¤¾ à¤†à¤ªà¤•à¥‹ à¤¸à¥‰à¤¸ à¤¯à¤¾ à¤ªà¤¨à¥€à¤° à¤­à¥€ à¤šà¤¾à¤¹à¤¿à¤?'
             : language === 'te'
-            ? 'నమస్కారం! మీరు 4 వ్యక్తుల కోసం పాస్తా పదార్థాలు కొనాలనుకుంటున్నారని నేను అర్థం చేసుకున్నాను. మీకు సాస్ లేదా చీజ్ కూడా కావాలా?'
+            ? 'à°¨à°®à°¸à±à°•à°¾à°°à°‚! à°®à±€à°°à± 4 à°µà±à°¯à°•à±à°¤à±à°² à°•à±‹à°¸à°‚ à°ªà°¾à°¸à±à°¤à°¾ à°ªà°¦à°¾à°°à±à°¥à°¾à°²à± à°•à±Šà°¨à°¾à°²à°¨à±à°•à±à°‚à°Ÿà±à°¨à±à°¨à°¾à°°à°¨à°¿ à°¨à±‡à°¨à± à°…à°°à±à°¥à°‚ à°šà±‡à°¸à±à°•à±à°¨à±à°¨à°¾à°¨à±. à°®à±€à°•à± à°¸à°¾à°¸à± à°²à±‡à°¦à°¾ à°šà±€à°œà± à°•à±‚à°¡à°¾ à°•à°¾à°µà°¾à°²à°¾?'
             : 'I understood you want to buy ingredients for pasta for 4 people. Do you also need any sauces or cheese?',
         intent: 'Dinner for 4 (Pasta Night)',
         itemsDetected: ['Pasta', 'Tomatoes', 'Onions', 'Cheese'],
@@ -271,7 +272,7 @@ export const CustomerAssistantPage: React.FC = () => {
       setFlowStatus('response_ready');
       setTimeout(() => setFlowStatus('idle'), 2500);
 
-      if (res.groqConfigured === false) {
+      if (res.intent === 'AI_UNAVAILABLE' || res.error === 'GROQ_API_KEY_NOT_CONFIGURED') {
         setGroqStatus({ isConfigured: false });
       }
 
@@ -440,16 +441,19 @@ export const CustomerAssistantPage: React.FC = () => {
       {/* Top Header Controls */}
       <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <AgentAvatar size="md" isListening={isListening} isSpeaking={isSpeaking} />
+          <div className="relative">
+            <AgentAvatar size="md" isListening={isListening} isSpeaking={isSpeaking} />
+            <span className="absolute -right-1 -bottom-1 rounded-full bg-violet-500 px-1.5 py-0.5 text-[8px] font-black text-white">+</span>
+          </div>
           <div>
             <h2 className="font-bold text-white text-sm sm:text-base flex items-center gap-2">
-              GrocerAI Customer Assistant
+              GrocerAI Shopping Assistant
               <span className="text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30">
                 Active
               </span>
             </h2>
             <p className="text-xs text-slate-400">
-              Multimodal conversational shopping partner
+              Alexa+ inspired demo Â· Not an Amazon service
             </p>
           </div>
         </div>
@@ -523,7 +527,7 @@ export const CustomerAssistantPage: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              తెలుగు
+              à°¤à±†à°²à±à°—à±
             </button>
           </div>
         </div>
@@ -612,7 +616,7 @@ export const CustomerAssistantPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Area: Voice Mode (JarvisCustomerCommandCenter - Identical to Manager HQ) OR Traditional Chat */}
+      {/* Alexa+ inspired voice companion or conversational chat */}
       {mode === 'voice' ? (
         <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 w-full">
           <JarvisCustomerCommandCenter />
@@ -620,6 +624,44 @@ export const CustomerAssistantPage: React.FC = () => {
       ) : (
         /* Screen 4: Multimodal Conversation Area */
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 max-w-4xl mx-auto w-full space-y-6">
+          <section className="rounded-3xl border border-violet-400/20 bg-gradient-to-br from-violet-950/60 via-slate-900 to-slate-900 p-5 sm:p-7 shadow-xl shadow-violet-950/20">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-2xl">
+                <span className="inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200">
+                  Alexa+ inspired Â· GrocerAI demo
+                </span>
+                <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                  What can I help you shop for?
+                </h1>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300">
+                  Ask for a product, a meal idea, an aisle, or a cart change. Iâ€™ll use GrocerAIâ€™s catalogue and keep your shared shopping session in sync.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/customer/cart')}
+                className="rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-left transition-colors hover:border-violet-400/50"
+              >
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Your cart</span>
+                <span className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
+                  <span>{cart.length} items</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-violet-300" />
+                </span>
+              </button>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {['Recommend a quick dinner', 'Find fresh produce', 'What is in my cart?'].map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => handleSend(prompt)}
+                  className="min-h-10 rounded-full border border-slate-700 bg-slate-950/60 px-4 py-2 text-xs font-medium text-slate-200 transition-colors hover:border-violet-400/50 hover:bg-violet-400/10"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </section>
           {/* Groq Unconfigured Alert Banner (Section 3, 21, 23) */}
           {!groqStatus.isConfigured && (
             <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 text-xs text-amber-200 space-y-1 animate-fade-in shadow-lg">
@@ -641,9 +683,9 @@ export const CustomerAssistantPage: React.FC = () => {
               </div>
               <div>
                 <span className="font-bold text-xs text-white flex items-center gap-2">
-                  GrocerAI Remembers ({currentUser.name || 'Shopper'})
+                  Your shopping memory ({currentUser.name || 'Shopper'})
                   <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  {recalledMemories.length ? 'Verified Hindsight recall' : 'No verified Cloud memory'}
+                  {recalledMemories.length ? 'Saved preference' : 'No saved preference yet'}
                   </span>
                 </span>
                 <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
@@ -790,6 +832,31 @@ export const CustomerAssistantPage: React.FC = () => {
               }`}>
                 <p className="text-sm leading-relaxed">{msg.text}</p>
 
+                {msg.sender === 'agent' && msg.data && (
+                  (msg.data.recommendedProducts?.length ? msg.data.recommendedProducts : msg.data.productFound ? [msg.data.productFound] : []).map(product => (
+                    <article key={product.id} className="mt-4 overflow-hidden rounded-2xl border border-violet-400/20 bg-slate-950/70">
+                      <div className="flex items-center gap-3 p-3">
+                        <img src={product.image_url} alt={product.name} className="h-16 w-16 rounded-xl object-cover" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-white">{product.name}</p>
+                          <p className="mt-0.5 text-xs text-slate-400">{product.brand} Â· {product.aisle}</p>
+                          <p className="mt-1 text-sm font-semibold text-violet-200">â‚¹{product.price}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSend(`Add ${product.name} to my cart`)}
+                          className="min-h-11 rounded-xl bg-violet-500 px-4 text-xs font-bold text-white transition-colors hover:bg-violet-400"
+                        >
+                          Add to cart
+                        </button>
+                      </div>
+                      <p className="border-t border-slate-800 px-3 py-2 text-[11px] leading-relaxed text-slate-400">
+                        From the GrocerAI catalogue. Ask why this fits, or request another option.
+                      </p>
+                    </article>
+                  ))
+                )}
+
                 {/* If Agent structured data exists (Screen 4) */}
                 {msg.data && (
                   <div className="mt-4 space-y-4 pt-3 border-t border-slate-800">
@@ -866,7 +933,7 @@ export const CustomerAssistantPage: React.FC = () => {
                               />
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-bold text-white truncate">{alt.name}</p>
-                                <p className="text-[11px] text-emerald-400 font-semibold">₹{alt.price}</p>
+                                <p className="text-[11px] text-emerald-400 font-semibold">â‚¹{alt.price}</p>
                               </div>
                             </div>
                           ))}
@@ -929,7 +996,7 @@ export const CustomerAssistantPage: React.FC = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend(inputText)}
-            placeholder="Type or speak your answer... (e.g. 'I need paneer')"
+            placeholder="Ask Alexa+ to find something, plan a meal, or update your cart..."
             className="flex-1 bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition-colors"
           />
 
@@ -957,3 +1024,7 @@ export const CustomerAssistantPage: React.FC = () => {
     </div>
   );
 };
+
+
+
+

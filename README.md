@@ -2,10 +2,10 @@
 
 GrocerAI is an intelligent physical grocery store platform driven by two coordinated autonomous agents operating over a shared event and inventory ledger:
 
-1. **Customer Agent**: Understands natural language shopping requests (multilingual & voice-enabled in English, Telugu, and Hindi), tracks real-time cart state, plans optimal store navigation routes, handles intelligent out-of-stock substitutions, and remembers individual customer dietary habits and preferences across visits.
+1. **Customer Agent**: An Alexa+ inspired (unofficial) conversational grocery-shopping simulation. It understands natural-language requests (English, Telugu, Hindi), recommends only real catalogue products, explains its choices, manages the active cart, plans store routes, handles substitutions, and can use customer preferences where available.
 2. **Store Agent**: Monitors physical store telemetry, inventory movements, shelf depletion, foot traffic, and demand funnels; autonomously synthesizes prioritized restock and operational recommendations for store managers; and adapts operational decisions over time through closed-loop experiential learning.
 
-Both agents leverage **Hindsight** (`vectorize-io/hindsight`) as an experiential memory layer to retain past operational outcomes and customer preferences, semantic recall relevant context, and learn continuously:
+The Customer, Store, and Security agents use GrocerAI's native Supabase-backed memory engine for scoped recall and deterministic reflection. Setup and migration steps are in [NATIVE_MEMORY_ENGINE.md](./NATIVE_MEMORY_ENGINE.md).
 
 $$\text{Observe} \longrightarrow \text{Recall} \longrightarrow \text{Reason} \longrightarrow \text{Act} \longrightarrow \text{Retain Outcome} \longrightarrow \text{Adapt Future Decisions}$$
 
@@ -30,15 +30,15 @@ $$\text{Observe} \longrightarrow \text{Recall} \longrightarrow \text{Reason} \lo
       |   - Dynamic Substitutions    |                    |   - Closed-Loop Adaptation   |
       +--------------+---------------+                    +--------------+---------------+
                      |                                                   |
-                     |  grocerai-customer-${customerId}                  |  grocerai-store-main
+                     |  Supabase customer / branch / session scopes      |
                      +-------------------------+-------------------------+
                                                |
                                                v
                                 +------------------------------+
-                                |   Hindsight Memory Engine    |
-                                |   - Embedded PostgreSQL      |
-                                |   - pgvector 0.8.5           |
-                                |   - Semantic Vector Recall   |
+                                |  Native GrocerAI Memory      |
+                                |  - Supabase PostgreSQL       |
+                                |  - Full-text + term ranking  |
+                                |  - Deterministic reflection  |
                                 +--------------+---------------+
                                                |
                                                v
@@ -64,7 +64,7 @@ $$\text{Observe} \longrightarrow \text{Recall} \longrightarrow \text{Reason} \lo
 - **25 Managerial Tools**: Store overview, inventory status, stockout alarms, demand funnel telemetry, unfulfilled customer demand, aisle foot traffic, and checkout queue wait times.
 - **Formulaic Restock Reasoning**: Synthesizes restock orders with multi-signal evidence, calculating quantities based on demand velocity, lost searches, and historical stockout post-mortems.
 - **Closed-Loop Adaptation**: Learns from historical restock outcomes (e.g. adapting milk restock quantities from 30 to $\ge 50$ units after past rush stockouts).
-- **Manager Audit Panel**: Real-time Hindsight connection badge, interactive semantic recall sandbox, and live activity log.
+- **Manager Memory Views**: Existing memory demonstration screens are legacy UI and are not yet connected to the native memory records.
 
 ---
 
@@ -72,8 +72,8 @@ $$\text{Observe} \longrightarrow \text{Recall} \longrightarrow \text{Reason} \lo
 
 - **Frontend**: React 18, TypeScript, Tailwind CSS, Lucide Icons, Vite
 - **AI / LLM**: Groq Cloud API (`llama-3.3-70b-versatile` / `qwen/qwen3.8-27b`)
-- **Memory Engine**: Hindsight (`@vectorize-io/hindsight-client`), running on Python 3.11 with `uvx hindsight-api`
-- **Vector Database**: Embedded PostgreSQL 18.1.0 with pgvector 0.8.5
+- **Memory Engine**: Native TypeScript service with Supabase/PostgreSQL full-text search
+- **Database**: Supabase PostgreSQL (memory migration must be applied manually)
 - **Testing**: Node.js / `tsx` automated verification suites (160 tests)
 
 ---
@@ -82,11 +82,12 @@ $$\text{Observe} \longrightarrow \text{Recall} \longrightarrow \text{Reason} \lo
 
 ### 1. Prerequisites
 - Node.js 18+ and npm
-- Python 3.11+
 - Groq API Key (from [console.groq.com](https://console.groq.com/keys))
 
 ### 2. Environment Configuration
 Copy `.env.example` to `.env` and fill in your Groq API credentials:
+
+Native memory also needs the existing server-side `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (or service-role alias). Apply the migration described in [NATIVE_MEMORY_ENGINE.md](./NATIVE_MEMORY_ENGINE.md). No external memory service or memory-specific API key is required.
 
 ```bash
 cp .env.example .env
@@ -96,10 +97,6 @@ Edit `.env`:
 ```ini
 GROQ_API_KEY=your_groq_api_key_here
 GROQ_MODEL=llama-3.3-70b-versatile
-HINDSIGHT_BASE_URL=http://localhost:8888
-HINDSIGHT_API_KEY=
-HINDSIGHT_API_LLM_PROVIDER=groq
-HINDSIGHT_STORE_BANK=grocerai-store-main
 ```
 
 > **Security Note**: Never commit `.env` to Git. The `.gitignore` file is configured to strictly exclude `.env` and all secret files.
@@ -109,17 +106,25 @@ HINDSIGHT_STORE_BANK=grocerai-store-main
 npm install
 ```
 
-### 4. Start Hindsight Server (Optional / For Persistent Memory)
-```bash
-python scripts/start-hindsight.py
-```
-*Note: If Hindsight is not running, GrocerAI automatically operates in graceful offline fallback mode without breaking user checkout or shopping interactions.*
-
-### 5. Start Frontend Development Server
+### 4. Start Frontend Development Server
 ```bash
 npm run dev
 ```
 Open `http://localhost:3000` to interact with the 17-screen physical grocery store application.
+
+## Amazon Build, Ship, Shape Demo
+
+The customer experience is an Alexa+ inspired GrocerAI simulation; it is not an official Amazon or Alexa service and does not require an Amazon account or Alexa device. Open the app, choose **Customer**, then open **Shopping Assistant** (or visit `/customer/assistant`). Chat is the default; voice mode uses the browser's speech-recognition and speech-synthesis support when available.
+
+For a reliable live demo:
+
+1. Configure `GROQ_API_KEY` in the server-side `.env` file to enable conversational reasoning. Product, availability, aisle, and cart facts are grounded by GrocerAI's existing catalogue and tools.
+2. Configure Supabase using the existing `SUPABASE_URL`, publishable/anon key, and server-only secret key settings when demonstrating cross-device cart/session synchronization. Without Supabase, the local demo can still use the app's existing local data mode.
+3. Run `npm install`, then `npm run dev`, and open `http://localhost:3000`.
+4. Ask for a product or meal idea, then tap **Add to cart** on an in-stock catalogue card. If a request matches multiple brands or sizes, choose the exact item. Try “Remove [catalogue product] from my cart” and “What is in my cart?”, then confirm the same cart appears on the cart and checkout pages.
+5. To demonstrate voice, allow microphone access in a supported browser. Start a conversation by tapping the voice control or saying “Hey Alexa”; follow-up turns remain conversational without repeating the wake phrase. Text chat stays available as a fallback.
+
+Checkout and payment remain the existing store simulation; no real payment is taken. Native memory requires Supabase configuration and the manual migration above; shopping and checkout continue if memory is unavailable.
 
 ---
 
@@ -128,8 +133,8 @@ Open `http://localhost:3000` to interact with the 17-screen physical grocery sto
 GrocerAI includes automated verification test suites:
 
 ```bash
-# 1. Hindsight Experiential Memory & Learning (34 tests)
-npx tsx src/tests/verify_hindsight.ts
+# Native Memory, Agent Integration, Isolation, Outage Handling, and 21 Scenarios
+npm run test:native-memory
 
 # 2. Customer Agent Multilingual & Voice Tools (38 tests)
 npx tsx src/tests/verify_customer_agent.ts
@@ -144,12 +149,12 @@ npx tsx src/tests/verify_phase2.ts
 npm run build
 ```
 
-**Verification Results: 160 / 160 Tests Passing (100%)**
+The native memory test script covers ranked recall, deterministic reflection, authorization, user/branch isolation, database failure handling, all 21 memory scenarios, and Customer/Store/Security agent context paths.
 
 ---
 
 ## Documentation
-- Detailed Hindsight implementation: [`HINDSIGHT_IMPLEMENTATION_REPORT.md`](./HINDSIGHT_IMPLEMENTATION_REPORT.md)
+- Native memory architecture and migration steps: [`NATIVE_MEMORY_ENGINE.md`](./NATIVE_MEMORY_ENGINE.md)
 - Database schema: [`supabase/schema.sql`](./supabase/schema.sql)
 - Sample seed data: [`supabase/seed.sql`](./supabase/seed.sql)
 

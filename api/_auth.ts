@@ -1,6 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { getSupabaseAdminClient } from '../src/server/supabaseAdmin.js';
-import { assertCustomerBankOwner } from '../src/server/hindsightCloudPolicy.js';
 
 export interface ManagerClaims {
   sub: string;
@@ -73,18 +72,3 @@ export async function authenticateCustomerIdentity(token: string, expectedCustom
   return { customerId: data.customer_id };
 }
 
-export async function authorizeHindsightBank(req: any, bankId: string, identityToken?: string): Promise<void> {
-  const customerMatch = /^grocerai-customer-([a-zA-Z0-9_-]{1,50})$/.exec(bankId);
-  if (customerMatch) {
-    const authHeader = String(req.headers?.authorization || '').replace(/^Bearer\s+/i, '');
-    const identity = await authenticateCustomerIdentity(identityToken || authHeader, customerMatch[1]);
-    assertCustomerBankOwner(bankId, identity.customerId);
-    return;
-  }
-
-  const storeBank = 'grocerai-store-main';
-  const securityBank = 'grocerai-security-main';
-  const labBank = /^grocerai-learning-lab-(customer|store|security)-[a-z0-9-]{1,80}$/.test(bankId);
-  if (bankId !== storeBank && bankId !== securityBank && !labBank) throw new Error('Hindsight bank is not authorized.');
-  authenticateManagerRequest(req);
-}

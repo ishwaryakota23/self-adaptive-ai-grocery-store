@@ -48,7 +48,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
   const [convState, setConvState] = useState<CustomerConvState>('WAKE_WORD_MONITORING');
   const [liveTranscript, setLiveTranscript] = useState('');
   const [activeSpeechCaption, setActiveSpeechCaption] = useState<string>(
-    'Hello! I am JARVIS, your supermarket shopping companion. Say "Hey JARVIS" or tap the orb to ask for products, meal planning, or to add items to your cart.'
+    'Hi! I’m Alexa+, your GrocerAI shopping companion. Ask me to find products, plan a meal, or update your cart.'
   );
   const [executedActionBadge, setExecutedActionBadge] = useState<{
     title: string;
@@ -122,10 +122,10 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
 
     const farewell =
       language === 'te'
-        ? 'ధన్యవాదాలు! మీ షాపింగ్ ఆనందదాయకంగా సాగాలని కోరుకుంటున్నాను. సహాయం కావాలంటే "హే జార్విస్" అని పిలవండి.'
+        ? 'ధన్యవాదాలు! మీ షాపింగ్ ఆనందదాయకంగా సాగాలని కోరుకుంటున్నాను. సహాయం కావాలంటే "హే అలెక్సా" అని పిలవండి.'
         : language === 'hi'
-        ? 'धन्यवाद! आपकी खरीदारी सुखद हो। जब भी सहायता चाहिए, "हे जार्विस" कहें।'
-        : "Goodbye! Have a great time shopping. Say 'Hey JARVIS' anytime you need me!";
+        ? 'धन्यवाद! आपकी खरीदारी सुखद हो। जब भी सहायता चाहिए, "हे एलेक्सा" कहें।'
+        : "Goodbye! Have a great time shopping. Say 'Hey Alexa' anytime you need me!";
 
     setActiveSpeechCaption(farewell);
     if (!isVoiceMuted) {
@@ -180,21 +180,21 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
 
         const lower = transcript.toLowerCase();
         const hasWakeWord =
-          lower.includes('hey jarvis') ||
-          lower.includes('jarvis') ||
-          lower.includes('హే జార్విస్') ||
-          lower.includes('జార్విస్') ||
-          lower.includes('हे जार्विस') ||
-          lower.includes('जार्विस');
+          lower.includes('hey alexa') ||
+          lower.includes('alexa') ||
+          lower.includes('హే అలెక్సా') ||
+          lower.includes('అలెక్సా') ||
+          lower.includes('हे एलेक्सा') ||
+          lower.includes('एलेक्सा');
 
         if (latest.isFinal) {
           const cleanCommand = transcript
-            .replace(/hey\s+jarvis[,.]?/i, '')
-            .replace(/jarvis[,.]?/i, '')
-            .replace(/హే\s+జార్విస్[,.]?/i, '')
-            .replace(/జార్విస్[,.]?/i, '')
-            .replace(/हे\s+जार्विस[,.]?/i, '')
-            .replace(/जार्विस[,.]?/i, '')
+            .replace(/hey\s+alexa[,.]?/i, '')
+            .replace(/alexa[,.]?/i, '')
+            .replace(/హే\s+అలెక్సా[,.]?/i, '')
+            .replace(/అలెక్సా[,.]?/i, '')
+            .replace(/हे\s+एलेक्सा[,.]?/i, '')
+            .replace(/एलेक्सा[,.]?/i, '')
             .trim();
 
           // STATE 1: WAKE_WORD_MONITORING
@@ -237,7 +237,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
               lower.includes('close conversation') ||
               lower.includes('goodbye') ||
               lower.includes("that's all") ||
-              lower.includes('bye jarvis') ||
+              lower.includes('bye alexa') ||
               lower.includes('చాలు') ||
               lower.includes('ఆపు') ||
               lower.includes('ముగించు') ||
@@ -263,7 +263,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
 
       recognition.onerror = (err: any) => {
         if (err.error === 'no-speech' || err.error === 'audio-capture') return;
-        console.warn('[CustomerJARVIS] Speech recognition notice:', err.error);
+        console.warn('[Alexa+] Speech recognition notice:', err.error);
       };
 
       recognition.onend = () => {
@@ -412,7 +412,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
       case 'IDLE':
       default:
         return convState === 'WAKE_WORD_MONITORING'
-          ? 'Standby • Say "Hey JARVIS" or tap Orb'
+          ? 'Standby • Say "Hey Alexa" or tap to talk'
           : 'Ready for Command • Say "End" to finish';
     }
   };
@@ -426,7 +426,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold uppercase tracking-wider">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>JARVIS CUSTOMER VOICE HQ</span>
+            <span>ALEXA+-INSPIRED DEMO</span>
           </span>
 
           <div className="hidden sm:flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs font-mono text-slate-300">
@@ -464,7 +464,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
                 ? 'bg-rose-950/40 border-rose-500/40 text-rose-300 hover:bg-rose-900/60'
                 : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
             }`}
-            title={isVoiceMuted ? 'Unmute JARVIS Voice' : 'Mute JARVIS Voice'}
+            title={isVoiceMuted ? 'Unmute Alexa+ voice' : 'Mute Alexa+ voice'}
           >
             {isVoiceMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             <span className="hidden sm:inline">{isVoiceMuted ? 'Voice Muted' : 'Voice On'}</span>
@@ -482,7 +482,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
       </div>
 
       {/* =================================================================== */}
-      {/* 2. CONCENTRIC HOLOGRAPHIC JARVIS REACTOR CORE ORB                  */}
+      {/* 2. CONVERSATIONAL SHOPPING ASSISTANT VOICE CONTROL                  */}
       {/* =================================================================== */}
       <div className="relative flex flex-col items-center justify-center my-4">
         <div
@@ -679,7 +679,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
           </div>
         )}
 
-        {/* Speech caption of JARVIS response */}
+        {/* Spoken assistant response */}
         <AnimatePresence mode="wait">
           {activeSpeechCaption ? (
             <motion.div
@@ -691,7 +691,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
               className="p-4 rounded-2xl bg-slate-950/80 border border-emerald-500/25 backdrop-blur-md shadow-xl"
             >
               <p className="text-sm sm:text-base text-slate-100 font-sans tracking-wide leading-relaxed font-normal">
-                <span className="text-emerald-400 font-mono font-bold mr-2 text-xs uppercase tracking-wider">JARVIS:</span>
+                <span className="text-emerald-400 font-mono font-bold mr-2 text-xs uppercase tracking-wider">ALEXA+:</span>
                 "{activeSpeechCaption}"
               </p>
             </motion.div>
@@ -701,7 +701,7 @@ export const JarvisCustomerCommandCenter: React.FC = () => {
               animate={{ opacity: 1 }}
               className="text-xs text-slate-400 font-mono"
             >
-              Say <span className="text-emerald-300 font-bold">"Hey JARVIS"</span> to begin continuous conversational command.
+              Say <span className="text-emerald-300 font-bold">"Hey Alexa"</span> or tap the assistant to start shopping.
             </motion.div>
           )}
         </AnimatePresence>

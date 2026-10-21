@@ -248,7 +248,7 @@ export const CustomerHomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Embedded Concentric Holographic JARVIS Voice Command Center */}
+        {/* Alexa+ inspired conversational shopping assistant */}
         <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl backdrop-blur-md">
           <JarvisCustomerCommandCenter />
         </div>

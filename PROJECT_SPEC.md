@@ -1,4 +1,4 @@
-# GrocerAI — Self-Adaptive AI Grocery Store
+﻿# GrocerAI â€” Self-Adaptive AI Grocery Store
 
 ## Vision
 
@@ -8,7 +8,7 @@ It is not simply a grocery chatbot or shopping assistant. The goal is to make th
 
 Core loop:
 
-**OBSERVE → RECALL → REASON → ACT → RE-OBSERVE → LEARN/RETAIN → FUTURE RECALL**
+**OBSERVE â†’ RECALL â†’ REASON â†’ ACT â†’ RE-OBSERVE â†’ LEARN/RETAIN â†’ FUTURE RECALL**
 
 ## Core Agents
 
@@ -51,7 +51,7 @@ It works with:
 * Manager actions
 * Action outcomes
 
-The Store Agent combines current store state, operational events, Hindsight memory, and Groq reasoning.
+The Store Agent combines current store state, operational events, Native Memory memory, and Groq reasoning.
 
 ## Agent Separation
 
@@ -59,17 +59,17 @@ The two agents have separate responsibilities.
 
 ### Customer Agent
 
-**Individual customer → personalized assistance**
+**Individual customer â†’ personalized assistance**
 
 ### Store Agent
 
-**Store-wide signals → operational intelligence**
+**Store-wide signals â†’ operational intelligence**
 
 Both agents can access authoritative application state through application services, while customer memories remain isolated between customers.
 
 ## Core Learning Loop
 
-OBSERVE → RECALL → REASON → ACT → RE-OBSERVE → LEARN/RETAIN → FUTURE RECALL
+OBSERVE â†’ RECALL â†’ REASON â†’ ACT â†’ RE-OBSERVE â†’ LEARN/RETAIN â†’ FUTURE RECALL
 
 ### Observe
 
@@ -90,7 +90,7 @@ Examples:
 
 ### Recall
 
-Relevant past experience is retrieved from Hindsight.
+Relevant past experience is retrieved from Native Memory.
 
 ### Reason
 
@@ -98,7 +98,7 @@ Groq combines:
 
 * Current application state
 * Current situation
-* Relevant Hindsight experience
+* Relevant Native Memory experience
 * Available tools
 
 ### Act
@@ -111,11 +111,11 @@ The system checks what happened after the action.
 
 ### Learn
 
-Meaningful outcomes are retained in Hindsight so that similar future situations can benefit from the experience.
+Meaningful outcomes are retained in Native Memory so that similar future situations can benefit from the experience.
 
 ## Memory
 
-Hindsight is the long-term experiential memory layer.
+Native Memory is the long-term experiential memory layer.
 
 ### Structured Application State
 
@@ -138,9 +138,9 @@ The current runtime uses local persistence/localStorage as its active fallback.
 
 Supabase/PostgreSQL schema and integration support are included for database-backed persistence.
 
-### Hindsight Memory
+### Native Memory
 
-Hindsight stores meaningful experiences such as:
+The native TypeScript engine stores eligible, actual experiences and outcomes in Supabase PostgreSQL:
 
 #### Customer Memory
 
@@ -152,7 +152,7 @@ Hindsight stores meaningful experiences such as:
 * Previous shopping mission experiences
 * Unavailable product requests
 
-Customer memory is isolated by customer identity.
+Customer memory is filtered by verified customer identity. Store and Security records are limited to the authorized manager branch.
 
 #### Store Memory
 
@@ -165,15 +165,15 @@ Customer memory is isolated by customer identity.
 * Operational actions
 * Action outcomes
 
-Store memory represents store-level operational experience.
+Store memory represents branch-level operational experience.
 
-## Hindsight Operations
+## Native Memory Operations
 
-The implementation uses:
+The implementation provides:
 
-* Retain — store meaningful experiences and outcomes
-* Recall — retrieve relevant previous experiences
-* Reflect — selectively reason over accumulated experience
+* Retain â€” store meaningful experiences and outcomes
+* Recall â€” retrieve relevant previous experiences
+* Reflect â€” apply deterministic, reusable pattern rules to recalled history
 
 Raw clicks and raw audio are not treated as long-term memory by default.
 
@@ -182,17 +182,17 @@ Raw clicks and raw audio are not treated as long-term memory by default.
 The Customer Agent follows:
 
 Customer Request
-↓
+â†“
 Recall Relevant Experience
-↓
+â†“
 Groq Reasoning
-↓
+â†“
 Backend Action
-↓
+â†“
 Observe Outcome
-↓
+â†“
 Retain Meaningful Experience
-↓
+â†“
 Future Personalized Assistance
 
 The goal is to use previous experiences to improve future customer assistance.
@@ -202,35 +202,35 @@ The goal is to use previous experiences to improve future customer assistance.
 The Store Agent follows:
 
 Store Signal
-↓
+â†“
 Recall Relevant Experience
-↓
+â†“
 Groq Reasoning
-↓
+â†“
 Recommendation / Action
-↓
+â†“
 Re-observe Outcome
-↓
+â†“
 Retain Outcome
-↓
+â†“
 Future Context-Aware Recommendation
 
 Example:
 
-A previous demand spike leads to a restocking action. The outcome is retained in Hindsight. When a similar demand spike occurs later, the previous experience can be recalled and used together with current store data to improve the next recommendation.
+A previous demand spike leads to a restocking action. The outcome is retained in Native Memory. When a similar demand spike occurs later, the previous experience can be recalled and used together with current store data to improve the next recommendation.
 
 ## Demand Funnel
 
 GrocerAI distinguishes different levels of demand:
 
 SEARCH DEMAND
-↓
+â†“
 INTEREST
-↓
+â†“
 SHOPPING INTENT
-↓
+â†“
 CHECKOUT INTENT
-↓
+â†“
 CONFIRMED DEMAND
 
 Unfulfilled demand is tracked separately.
@@ -344,7 +344,7 @@ GrocerAI supports:
 
 ### Voice
 
-Voice Input → Speech-to-Text → Customer Agent → Groq Reasoning → Backend Tools → Response → Text-to-Speech
+Voice Input â†’ Speech-to-Text â†’ Customer Agent â†’ Groq Reasoning â†’ Backend Tools â†’ Response â†’ Text-to-Speech
 
 ### Chat
 
@@ -374,7 +374,7 @@ Events can include:
 
 The event stream provides operational history.
 
-Hindsight stores selected meaningful experiential memory.
+Native Memory stores selected meaningful experiential memory.
 
 ## Service Boundaries
 
@@ -384,7 +384,7 @@ The implementation maintains clear service boundaries including:
 * customerAgentTools
 * storeAgent
 * storeAgentTools
-* hindsightService
+* memoryEngine
 * memoryService
 * sessionService
 * missionService
@@ -406,7 +406,7 @@ The system must:
 * Use environment variables for secrets
 * Never commit .env
 * Provide .env.example
-* Keep Groq and Hindsight credentials out of frontend code
+* Keep Groq and Supabase service-role credentials out of frontend code
 * Isolate customer memory by customer identity
 * Protect manager functionality
 
@@ -415,22 +415,22 @@ The system must:
 The current implementation consists of:
 
 React + TypeScript Frontend
-↓
+â†“
 Application Services
-↓
+â†“
 Customer Agent / Store Agent
-↓
+â†“
 Groq Reasoning + Backend Tools
-↓
+â†“
 Structured Application State
-↕
-Hindsight Experiential Memory
+â†•
+Native GrocerAI Memory
 
 Current development persistence uses local persistence/localStorage.
 
 Supabase/PostgreSQL integration and schema support are included for database-backed persistence.
 
-Hindsight is configured through environment-based service configuration.
+Native memory uses the existing server-side Supabase URL and service-role secret; it does not require a separate memory service or key.
 
 ## Production Considerations
 
@@ -438,12 +438,12 @@ Deployment requires production-specific configuration for:
 
 * Application hosting
 * Persistent database
-* Hindsight service endpoint
+* Supabase PostgreSQL database and manually applied memory migration
 * Groq credentials
-* Hindsight credentials
+* Supabase server credential
 * Secure environment variables
 
-A local Hindsight endpoint must not be assumed to be publicly accessible by a deployed application.
+The native memory migration is not applied automatically. See `NATIVE_MEMORY_ENGINE.md` before deployment.
 
 ## Core Demo Story
 
@@ -478,4 +478,5 @@ The customer interface, mobile companion, manager dashboard, application state, 
 
 **The store observes, remembers, reasons, acts, observes again, and learns from the outcome.**
 
-Hindsight is not an isolated feature. It is the experiential memory layer that enables the Customer Agent and Store Agent to improve future decisions from meaningful past experiences.
+Native memory is used by Customer, Store, and Security agent paths to retrieve scoped past experiences and outcomes for future context.
+

@@ -127,7 +127,7 @@ export class KioskService {
       action: 'OPEN_VERIFICATION_KIOSK',
       kioskId: targetKioskId,
       requestedBy: params.requestedBy || 'manager',
-      commandSource: params.commandSource || 'JARVIS',
+      commandSource: params.commandSource || 'Alexa+',
       message: params.message || 'Kiosk 3 is active. You can use it.',
       timestamp: new Date().toISOString()
     };

@@ -1,0 +1,15 @@
+# Native GrocerAI Memory Engine
+
+The native engine is implemented in `src/server/memoryEngine.ts` and its deterministic rules are in `src/server/memoryRules.ts`. It stores records in Supabase/PostgreSQL, retrieves them with PostgreSQL full-text search plus term overlap ranking, and emits a conservative reflection when a memory kind recurs. Customer records require a verified customer ID; the server admin client is used so browser clients cannot query the table. Content is redacted for common credential patterns before storage.
+
+Customer assistant prompts receive matching memories and reflections. Store Agent prompts receive branch-scoped operational memories. Security analysis recalls security-domain records, and reviewed incident resolutions can be retained. Security decisions remain governed by deterministic authorization and event rules.
+
+## Database setup
+
+Review and manually apply `supabase/migrations/20261021_native_grocerai_memory.sql` in the intended Supabase project. It creates a new table and indexes and does not drop or alter existing business tables. RLS is enabled and client roles receive no table grants; the server service role is the only granted role. The scope constraint requires customer rows to have only a user scope and store/security rows to have only a branch scope. The application requires server-side `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (or the existing service-role key alias). Without these, the engine returns an explicit unavailable result; it does not claim local or shared persistence.
+
+Run `npm run test:native-memory` for ranking, sanitization, storage and recall behavior against a fake PostgREST adapter, authorization checks, outage behavior, all 21 scenario fixtures, and Customer/Store/Security agent context integration. A live Supabase persistence round-trip still requires project credentials, the migration, and a verified authenticated test customer. It has not been run in this workspace: the Supabase keys exist in `.env`, but are not present in the current server process, and no live customer identity token is available here. Do not treat the fake-adapter tests as proof of live persistence.
+
+## Migration status
+
+The Hindsight SDK dependencies, cloud policy, daemon launcher, API routes, health checks, and configuration examples have been removed. Native paths are active for Customer, Store, and Security agent context as described above. Decision: retain the old in-process scenario simulator for now, but clearly label its output as scripted simulation. Migrating those screens would alter Product Discovery badges and the store restock demo; the existing Alexa and shopping UI scope is frozen. The simulator is not an external service and is not the persistence/retrieval layer used by native agent context. Its seeded examples are not evidence of learned production memories. Legacy identifiers and existing checkout/action database fields (`is_hindsight_stored`, `hindsight_id`) remain for compatibility and should be retired only with a targeted UI/data migration.

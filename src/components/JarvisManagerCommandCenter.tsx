@@ -114,7 +114,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
           jarvisManagerService.triggerInactivityPrompt();
           promptTimeoutRef.current = setTimeout(() => {
             if (conversationStateRef.current === 'AWAITING_CONTINUATION') {
-              jarvisManagerService.endConversation("Ending conversation session due to inactivity. Say 'Hey JARVIS' whenever you need me.");
+              jarvisManagerService.endConversation("Ending conversation session due to inactivity. Say 'Hey Alexa' whenever you need me.");
             }
           }, 35000);
         }
@@ -122,7 +122,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
     }
   };
 
-  // Subscribe to JARVIS service events
+  // Subscribe to Alexa+ service events
   useEffect(() => {
     const unsubMsg = jarvisManagerService.subscribe(() => {
       const msgs = jarvisManagerService.getMessages();
@@ -133,7 +133,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
 
       const latest = msgs[msgs.length - 1];
       if (latest) {
-        if (latest.sender === 'JARVIS') {
+        if (latest.sender === 'Alexa+') {
           setActiveSpeechCaption(latest.text);
         }
         if (latest.actionCard && latest.actionCard.status === 'EXECUTED') {
@@ -166,7 +166,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
   }, []);
 
   // Proactive Stockout Exception Trigger on Mount (User Requirement 10)
-  // When Amul Taaza Milk is out of stock (0 units), JARVIS proactively reports it to the manager!
+  // When Amul Taaza Milk is out of stock (0 units), Alexa+ proactively reports it to the manager!
   useEffect(() => {
     if (hasTriggeredProactiveRef.current) return;
     const timer = setTimeout(() => {
@@ -223,9 +223,9 @@ export const JarvisManagerCommandCenter: React.FC = () => {
 
         const isSpeaking = isSpeakingRef.current || voiceStateRef.current === 'SPEAKING' || echoGuard.getIsSpeaking();
 
-        // 1. While JARVIS is actively speaking through computer speakers:
+        // 1. While Alexa+ is actively speaking through computer speakers:
         if (isSpeaking) {
-          // Check for intentional user barge-in (e.g. "stop", "wait", "cancel", "hey jarvis")
+          // Check for intentional user barge-in (e.g. "stop", "wait", "cancel", "hey alexa")
           if (echoGuard.isBargeInInterruption(transcript)) {
             jarvisManagerService.stopSpeaking();
             voiceStateRef.current = 'LISTENING';
@@ -242,14 +242,14 @@ export const JarvisManagerCommandCenter: React.FC = () => {
 
         const lower = transcript.toLowerCase();
         const hasWakeWord =
-          lower.includes('hey jarvis') ||
-          lower.includes('jarvis') ||
+          lower.includes('hey alexa') ||
+          lower.includes('alexa') ||
           lower.includes('service') ||
           lower.includes('hey service');
 
         if (latest.isFinal) {
           const cleanCommand = transcript
-            .replace(/^(hey|hi|hello|ok|okay)?\s*(jarvis|service)[,.!?]?\s*/i, '')
+            .replace(/^(hey|hi|hello|ok|okay)?\s*(alexa|service)[,.!?]?\s*/i, '')
             .trim();
 
           const hasPendingQuestion =
@@ -316,7 +316,8 @@ export const JarvisManagerCommandCenter: React.FC = () => {
               lower.includes('stop conversation') ||
               lower.includes('goodbye') ||
               lower.includes("that's all") ||
-              lower.includes('bye jarvis')
+              lower.includes('bye alexa') ||
+              lower.includes('bye alexa')
             ) {
               jarvisManagerService.endConversation();
             } else {
@@ -339,7 +340,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
 
       recognition.onerror = (event: any) => {
         if (event.error !== 'no-speech' && event.error !== 'aborted') {
-          console.warn('[JARVIS Voice Error]:', event.error);
+          console.warn('[Alexa+ Voice Error]:', event.error);
         }
       };
 
@@ -403,7 +404,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
         }
       };
     } catch (e) {
-      console.warn('[JARVIS] Speech recognition init failed:', e);
+      console.warn('[Alexa+] Speech recognition init failed:', e);
     }
 
     return () => {
@@ -427,14 +428,14 @@ export const JarvisManagerCommandCenter: React.FC = () => {
     }
   };
 
-  // Direct tactile interaction when manager taps/clicks the JARVIS Reactor Orb
+  // Direct tactile interaction when manager taps/clicks the Alexa+ Reactor Orb
   const handleOrbClick = () => {
     if (voiceState === 'SPEAKING') {
       jarvisManagerService.stopSpeaking();
       jarvisManagerService.setVoiceState('LISTENING');
     } else if (conversationState === 'CONVERSATION_ACTIVE') {
       // Toggle or keep active listening
-      jarvisManagerService.processManagerInput('Hello JARVIS');
+      jarvisManagerService.processManagerInput('Hello Alexa');
     } else {
       voiceService.playAudioChime(620);
       jarvisManagerService.startConversation("Yes, Manager. I am listening.");
@@ -464,7 +465,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
 
   // Visual status pill text
   const getStatusLabel = () => {
-    if (voiceState === 'SPEAKING') return 'JARVIS Speaking...';
+    if (voiceState === 'SPEAKING') return 'Assistant speaking...';
     if (voiceState === 'PROCESSING') return 'Synthesizing Store Telemetry & Hindsight...';
     if (pendingAction?.type === 'VIEW_SURVEILLANCE' || pendingContextQuestion === 'VIEW_SURVEILLANCE') {
       return liveTranscript
@@ -479,7 +480,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
     if (voiceState === 'LISTENING') return liveTranscript ? `Hearing: "${liveTranscript}"` : 'Listening to Manager...';
     if (conversationState === 'CONVERSATION_ACTIVE') return 'Conversation Active • Speak follow-up naturally';
     if (conversationState === 'AWAITING_CONTINUATION') return 'Inactivity Check • Say "Continue" or "End"';
-    return 'Standby • Say "Hey JARVIS" or Tap Orb';
+    return 'Standby • Say "Hey Alexa" or tap to talk';
   };
 
   return (
@@ -570,14 +571,14 @@ export const JarvisManagerCommandCenter: React.FC = () => {
       </div>
 
       {/* =================================================================== */}
-      {/* 2. CENTERPIECE: HOLOGRAPHIC JARVIS REACTOR ORB (VOICE-FIRST PRESENCE) */}
+      {/* 2. CENTERPIECE: STORE OPERATIONS VOICE ASSISTANT */}
       {/* =================================================================== */}
       <div className="relative z-10 flex flex-col items-center justify-center py-6 sm:py-8">
         {/* Holographic Orb Container */}
         <div
           onClick={handleOrbClick}
           className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center cursor-pointer select-none group"
-          title="Tap to wake JARVIS or toggle voice turn"
+          title="Tap to wake the GrocerAI assistant or toggle voice turn"
         >
           {/* Ambient Outer Halo Glow */}
           <motion.div
@@ -816,7 +817,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
                 className="p-4 rounded-2xl bg-slate-950/70 border border-cyan-500/20 backdrop-blur-md shadow-xl"
               >
                 <p className="text-sm sm:text-base text-slate-100 font-sans tracking-wide leading-relaxed font-normal">
-                  <span className="text-cyan-400 font-mono font-bold mr-2 text-xs uppercase tracking-wider">JARVIS:</span>
+                  <span className="text-cyan-400 font-mono font-bold mr-2 text-xs uppercase tracking-wider">GROCERAI:</span>
                   "{activeSpeechCaption}"
                 </p>
               </motion.div>
@@ -826,7 +827,7 @@ export const JarvisManagerCommandCenter: React.FC = () => {
                 animate={{ opacity: 1 }}
                 className="text-xs text-slate-400 font-mono"
               >
-                Say <span className="text-cyan-300 font-bold">"Hey JARVIS"</span> to begin continuous conversational command.
+                Say <span className="text-cyan-300 font-bold">"Hey Alexa"</span> to begin continuous conversation.
               </motion.div>
             )}
           </AnimatePresence>

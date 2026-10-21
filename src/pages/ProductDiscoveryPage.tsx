@@ -112,7 +112,7 @@ export const ProductDiscoveryPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Embedded Concentric Holographic JARVIS Voice Command Center */}
+        {/* Embedded Concentric Holographic Alexa+ Voice Command Center */}
         <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-4 shadow-2xl backdrop-blur-md">
           <JarvisCustomerCommandCenter />
         </div>
@@ -198,7 +198,7 @@ export const ProductDiscoveryPage: React.FC = () => {
                             ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40'
                             : 'bg-amber-950/90 text-amber-300 border border-amber-500/40'
                         }`}
-                        title="Synthetic demo personalization; this badge is not verified from Hindsight Cloud."
+                        title="Synthetic demo personalization; this badge is not retrieved from native persistent memory."
                       >
                         <Brain className="w-2.5 h-2.5" />
                         Demo: {product._hindsightTag}

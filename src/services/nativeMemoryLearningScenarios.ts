@@ -1,6 +1,6 @@
-export type LearningAgent = 'CUSTOMER' | 'STORE' | 'SECURITY';
+﻿export type LearningAgent = 'CUSTOMER' | 'STORE' | 'SECURITY';
 
-export interface HindsightLearningScenario {
+export interface NativeMemoryLearningScenario {
   id: string;
   agent: LearningAgent;
   title: string;
@@ -17,7 +17,7 @@ export interface HindsightLearningScenario {
   authorizationNote: string;
 }
 
-export const HINDSIGHT_LEARNING_SCENARIOS: HindsightLearningScenario[] = [
+export const NATIVE_MEMORY_LEARNING_SCENARIOS: NativeMemoryLearningScenario[] = [
   {
     id: 'C1', agent: 'CUSTOMER', title: 'Personalized shopping preferences',
     description: 'Remember an explicitly preferred bread brand and a rejected brand for this customer only.',
@@ -34,11 +34,11 @@ export const HINDSIGHT_LEARNING_SCENARIOS: HindsightLearningScenario[] = [
   {
     id: 'C2', agent: 'CUSTOMER', title: 'Budget-aware basket planning',
     description: 'Remember an explicit basket budget and accepted trade-offs without storing temporary cart contents.',
-    scope: 'Synthetic demo customer LAB-C2', context: 'A demo customer planned a grocery basket with a stated ₹300 ceiling.',
-    observedEvent: 'Customer removed the premium snack after the proposed basket exceeded ₹300 and chose a lower-priced alternative.',
+    scope: 'Synthetic demo customer LAB-C2', context: 'A demo customer planned a grocery basket with a stated â‚¹300 ceiling.',
+    observedEvent: 'Customer removed the premium snack after the proposed basket exceeded â‚¹300 and chose a lower-priced alternative.',
     actionTaken: 'Recalculated the basket using the catalog price values available in the demonstration.',
-    actualOutcome: 'The demo basket was brought under the stated ₹300 budget after the customer accepted the trade-off.',
-    futureSituation: 'The same demo customer requests another basket under ₹300.',
+    actualOutcome: 'The demo basket was brought under the stated â‚¹300 budget after the customer accepted the trade-off.',
+    futureSituation: 'The same demo customer requests another basket under â‚¹300.',
     recallQuery: 'LAB-C2 basket under 300 budget accepted trade off',
     baselineRecommendation: 'Build a new basket from the current request and ask about budget.',
     decisionContext: 'Treat the previous ceiling and accepted trade-off as customer-provided history. Use current authoritative prices for any total; memory contains no current price authority.',
@@ -292,3 +292,4 @@ export const HINDSIGHT_LEARNING_SCENARIOS: HindsightLearningScenario[] = [
     authorizationNote: 'Do not infer guilt or suspicion from prior incidents.'
   }
 ];
+

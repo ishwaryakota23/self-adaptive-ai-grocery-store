@@ -34,7 +34,7 @@ export const CustomerMemoryPage: React.FC = () => {
         </div>
         <h2 className="text-2xl font-black text-white">No Customer Identified</h2>
         <p className="text-sm text-slate-400 mt-2 max-w-md">
-          Customer Hindsight securely retains episodic preferences, past shopping lists, and dietary habits across store visits for identified shoppers.
+          Native customer memory is stored in Supabase only after an authenticated, successful write. This legacy page's trace examples are scripted demonstrations, not a view of persisted records.
         </p>
         <div className="flex items-center gap-3 mt-6">
           <button
@@ -121,7 +121,7 @@ export const CustomerMemoryPage: React.FC = () => {
           /* Agent Episodic Memory */
           <div className="space-y-6">
             <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl text-xs text-slate-400 flex items-center justify-between">
-              <span>Customer Agent memory examples below are synthetic demonstrations. Verified Cloud memories appear only after an authenticated Hindsight recall.</span>
+              <span>Examples on this legacy page are synthetic demonstrations. They are not retrieved from the native Supabase memory store.</span>
               <span className="text-amber-300 font-mono font-bold text-[11px]">DEMO EXAMPLES</span>
             </div>
 
@@ -132,7 +132,7 @@ export const CustomerMemoryPage: React.FC = () => {
                   <Brain className="w-5 h-5 text-emerald-400" />
                   <div>
                     <h3 className="text-sm font-bold text-white">Demonstrable Customer Adaptation</h3>
-                    <p className="text-xs text-slate-400">Live trace proving how customer feedback and choices changed future agent recommendations</p>
+                    <p className="text-xs text-slate-400">Scripted trace illustrating how customer feedback could change a future recommendation</p>
                   </div>
                 </div>
 

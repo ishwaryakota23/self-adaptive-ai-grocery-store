@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import {
   Smartphone,
@@ -32,7 +32,7 @@ import { parseMobileHandoffParams } from '../services/sessionHandoffUrl.js';
 import { customerAgent, getCustomerAgentIdentity } from '../services/customerAgent.js';
 import { voiceService } from '../services/voiceService.js';
 import { languageDetector } from '../services/languageDetector.js';
-import { hindsightService } from '../services/hindsightService.js';
+import { memoryService } from '../services/nativeMemoryService.js';
 import { ProductCameraIdentifier } from '../components/ProductCameraIdentifier.js';
 import { CustomerJarvisVoiceOrb } from '../components/CustomerJarvisVoiceOrb.js';
 import { qrService } from '../services/qrService.js';
@@ -168,7 +168,7 @@ export const CustomerMobileDashboard: React.FC = () => {
     const custId = session?.customer_id || '';
     setRecalledMemories([]);
     if (custId) {
-      hindsightService.recallCustomerMemories(custId, 'preferences diet organic habits')
+      memoryService.recallCustomerMemories(custId, 'preferences diet organic habits')
         .then(res => { if (active) setRecalledMemories(res.success ? res.results.map(item => item.text.split('\n')[0]) : []); })
         .catch(() => { if (active) setRecalledMemories([]); });
     }
@@ -398,7 +398,7 @@ export const CustomerMobileDashboard: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-slate-950 text-white selection:bg-emerald-500 selection:text-slate-950">
       {(sharedSyncError || sharedRevision !== null) && (
         <div role={sharedSyncError ? 'alert' : 'status'} className={`px-4 py-2 text-[11px] ${sharedSyncError ? 'bg-rose-950/60 text-rose-200 border-b border-rose-700' : 'bg-slate-900 text-slate-400 border-b border-slate-800'}`}>
-          {sharedSyncError || `Shared cart connected · revision ${sharedRevision} · refreshes about every 2.5 seconds`}
+          {sharedSyncError || `Shared cart connected Â· revision ${sharedRevision} Â· refreshes about every 2.5 seconds`}
         </div>
       )}
       {/* Mobile Top Bar */}
@@ -414,7 +414,7 @@ export const CustomerMobileDashboard: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[10px] text-slate-400 font-mono font-semibold">
-                {sessionId} • Flagship Store
+                {sessionId} â€¢ Flagship Store
               </span>
             </div>
           </div>
@@ -686,7 +686,7 @@ export const CustomerMobileDashboard: React.FC = () => {
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder={isListening ? "Listening..." : "Say 'Hey JARVIS' or ask for item..."}
+              placeholder={isListening ? "Listening..." : "Ask Alexa+ to find an item..."}
               className="flex-1 bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none transition-colors"
             />
             <button
@@ -706,7 +706,7 @@ export const CustomerMobileDashboard: React.FC = () => {
               <h2 className="font-bold text-xs text-white">Cart Synchronized with Kiosk</h2>
             </div>
             <span className="text-xs font-mono font-bold text-emerald-400">
-              {cart.length} items (₹{cartTotal})
+              {cart.length} items (â‚¹{cartTotal})
             </span>
           </div>
 
@@ -725,7 +725,7 @@ export const CustomerMobileDashboard: React.FC = () => {
                     {item.quantity}x {item.product.name}
                   </span>
                   <span className="font-mono font-semibold text-white">
-                    ₹{item.product.price * item.quantity}
+                    â‚¹{item.product.price * item.quantity}
                   </span>
                 </div>
               ))
@@ -738,12 +738,12 @@ export const CustomerMobileDashboard: React.FC = () => {
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 cursor-pointer active:scale-95"
             >
               <QrCode className="w-4 h-4" />
-              <span>Checkout →</span>
+              <span>Checkout â†’</span>
             </button>
 
             <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
               <div className="flex items-center justify-between text-slate-300">
-                <span>Exit Station: Kiosks 1–4</span>
+                <span>Exit Station: Kiosks 1â€“4</span>
                 <span className="text-emerald-400 font-semibold flex items-center gap-1 font-mono">
                   Session: {sessionId}
                 </span>
@@ -815,7 +815,7 @@ export const CustomerMobileDashboard: React.FC = () => {
               </div>
               <div className="flex items-center justify-between text-slate-400">
                 <span>Cart Total ({cart.length} items):</span>
-                <span className="font-mono text-white font-bold text-sm">₹{cartTotal}</span>
+                <span className="font-mono text-white font-bold text-sm">â‚¹{cartTotal}</span>
               </div>
             </div>
 
@@ -838,7 +838,7 @@ export const CustomerMobileDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Customer Mobile JARVIS Voice Interface Companion Orb */}
+      {/* Customer mobile voice companion */}
       <CustomerJarvisVoiceOrb
         sessionId={sessionId}
         mission={mission}
@@ -869,7 +869,7 @@ export const CustomerMobileDashboard: React.FC = () => {
         <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-5">
           <div className="max-w-md w-full rounded-3xl border border-slate-700 bg-slate-900 p-7 text-center space-y-4">
             {handoffError ? <AlertCircle className="w-10 h-10 mx-auto text-rose-400" /> : <RefreshCw className="w-10 h-10 mx-auto text-emerald-400 animate-spin" />}
-            <h1 className="text-xl font-bold text-white">{handoffError ? 'Could not load this shopping session' : 'Loading your shared shopping session…'}</h1>
+            <h1 className="text-xl font-bold text-white">{handoffError ? 'Could not load this shopping session' : 'Loading your shared shopping sessionâ€¦'}</h1>
             <p className="text-sm text-slate-300">{handoffError || 'Connecting to the secure shared cart. No new cart will be created.'}</p>
             {handoffError && <button onClick={() => window.location.assign('/kiosk')} className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm">Return to kiosk and scan a fresh QR</button>}
           </div>
@@ -915,3 +915,6 @@ export const CustomerMobileDashboard: React.FC = () => {
     </div>
   );
 };
+
+
+

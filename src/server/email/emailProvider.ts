@@ -623,7 +623,7 @@ export class RealEmailProvider implements IEmailProvider {
             Session ID: ${sessionId}
           </div>
           <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 12px; color: #334155; margin-top: 16px;">
-            <strong>Companion Guidance:</strong> Keep this pass handy. JARVIS will guide your shopping in-aisle and keep your digital cart synchronized with our physical shelves.
+            <strong>Companion Guidance:</strong> Keep this pass handy. Alexa+ will guide your shopping in-aisle and keep your digital cart synchronized with our physical shelves.
           </div>
         </div>
       `,

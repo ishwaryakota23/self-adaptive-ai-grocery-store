@@ -1,8 +1,9 @@
-import { db } from './db.js';
+﻿import { db } from './db.js';
 import { hindsightEngine } from './hindsightEngine.js';
 import { eventService } from './eventService.js';
-import { hindsightService } from './hindsightService.js';
-import { hasVerifiedOutcomeEvidence } from '../server/hindsightCloudPolicy.js';
+import { storeMemory } from '../server/memoryEngine.js';
+import { hasVerifiedOutcomeEvidence } from '../server/outcomeEvidenceRules.js';
+import { memoryService } from './nativeMemoryService.js';
 import { roiEngine } from './roiEngine.js';
 import {
   Product,
@@ -504,7 +505,7 @@ export const storeAgentTools = {
       `Recent stock deductions: ${recentDeductions} units moved off shelf`
     ];
 
-    // Hindsight context is supplied to the store agent only when a real recall succeeds.
+    // Recalled memory context is supplied only after a successful native recall.
     // Keep this deterministic tool grounded in current database telemetry.
     const historicalContext: string[] = ['Recommendation quantity uses current inventory, confirmed sales, and unmet requests.'];
 
@@ -516,10 +517,10 @@ export const storeAgentTools = {
       `Recent stock deductions: ${recentDeductions} units moved off shelf`
     ];
     const expectedBenefit = currentStock === 0
-      ? `Eliminate active stockout; estimated recovery of ₹${(prod.price * suggestedQuantity * 0.8).toLocaleString()} in customer demand`
+      ? `Eliminate active stockout; estimated recovery of â‚¹${(prod.price * suggestedQuantity * 0.8).toLocaleString()} in customer demand`
       : `Maintain continuous availability; prevent stockout risk during next peak window`;
-    const downsideRisk = `Carrying cost if demand drops below 3 units/day (Holding value: ₹${(prod.price * suggestedQuantity).toLocaleString()})`;
-    const estimatedImpact = `Avoided lost sales: ₹${(prod.price * Math.max(1, unfulfilledDemand)).toLocaleString()}`;
+    const downsideRisk = `Carrying cost if demand drops below 3 units/day (Holding value: â‚¹${(prod.price * suggestedQuantity).toLocaleString()})`;
+    const estimatedImpact = `Avoided lost sales: â‚¹${(prod.price * Math.max(1, unfulfilledDemand)).toLocaleString()}`;
 
     const recommendation: StructuredRecommendation = {
       recommendationId: `rec-restock-${prod.id}-${Date.now()}`,
@@ -610,7 +611,7 @@ export const storeAgentTools = {
           `Verification Kiosk ${q.counter_number} queue length: ${q.customer_count} shoppers`,
           `Estimated wait: ${q.estimated_wait_mins} minutes`
         ],
-        historicalContext: ['Hindsight Lesson: Opening adjacent verification kiosks during queue surges reduced checkout wait to <2.0 mins.'],
+        historicalContext: [],
         expectedBenefit: 'Reduce verification queue wait below 3 mins SLA and prevent checkout abandonment',
         downsideRisk: 'Temporary staff redeployment for ~30 minutes',
         estimatedImpact: 'Queue congestion resolved within 5 minutes'
@@ -637,7 +638,7 @@ export const storeAgentTools = {
           evidence: [
             `Current shelf stock: ${inv.quantity} units (Capacity: ${maxCap} units)`,
             `Sales velocity: ${velocity} units in recent window`,
-            `Capital locked in slow-moving stock: ₹${(prod.price * inv.quantity).toLocaleString()}`
+            `Capital locked in slow-moving stock: â‚¹${(prod.price * inv.quantity).toLocaleString()}`
           ],
           suggestedAction: `Pause replenishment for ${prod.name} and apply promotional discount or bundle to reduce wastage risk`,
           suggestedQuantity: 0,
@@ -650,7 +651,7 @@ export const storeAgentTools = {
             `Recent sales: ${velocity} units`
           ],
           historicalContext: ['Historical experience indicates slow movement for this SKU during non-promotional cycles.'],
-          expectedBenefit: `Avoid unnecessary capital lockup of ₹${(prod.price * 20).toLocaleString()} and reduce expiration wastage risk`,
+          expectedBenefit: `Avoid unnecessary capital lockup of â‚¹${(prod.price * 20).toLocaleString()} and reduce expiration wastage risk`,
           downsideRisk: 'None (stock covers >14 days of current run-rate)',
           estimatedImpact: 'Wastage risk reduced to 0%'
         });
@@ -867,33 +868,19 @@ export const storeAgentTools = {
     db.addActionOutcome(outcome);
 
     const netLabel = outcome.roi_classification === 'ACTUAL' ? 'Actual' : 'Estimated';
-    const roiText = roiReport ? ` Measured ${netLabel} Net Business Impact: ₹${roiReport.netImpact.toLocaleString()} (Gross Opportunity: ₹${roiReport.grossBenefit.toLocaleString()} - Operational Cost: ₹${roiReport.totalCost.toLocaleString()}).` : '';
+    const roiText = roiReport ? ` Measured ${netLabel} Net Business Impact: â‚¹${roiReport.netImpact.toLocaleString()} (Gross Opportunity: â‚¹${roiReport.grossBenefit.toLocaleString()} - Operational Cost: â‚¹${roiReport.totalCost.toLocaleString()}).` : '';
 
     // Retain full operational experience into Hindsight store memory bank
     const verifiedOutcome = hasVerifiedOutcomeEvidence(outcomeData);
     const syntheticOutcome = outcomeData.evidence_source === 'synthetic-demo';
-    const retainResult = verifiedOutcome && action?.status === 'completed' && !syntheticOutcome
-      ? await hindsightService.retainStoreOperationalExperience({
-          situation: outcome.observed_event,
-          actionTaken: outcome.action_taken,
-          outcome: `${outcome.outcome_summary} (${outcome.reobserved_metric}).${roiText}`,
-          takeaway: `Observed outcome: ${outcome.outcome_summary}. Follow-up evidence: ${outcome.reobserved_metric}.`,
-          category: 'restock',
-          documentId: `outcome-${recommendationId}`,
-          metadata: {
-            recommendationId,
-            actionId,
-            evidenceSource: outcomeData.evidence_source || 'unverified',
-            netImpact: String(outcome.net_impact ?? ''),
-            classification: outcome.roi_classification || ''
-          }
-        })
-      : { success: false, documentId: '', error: syntheticOutcome ? 'Synthetic demo data is not retained in the production store bank.' : 'Only complete verified-operation evidence for a completed action is retained; Hindsight retention was skipped.' };
-    if (retainResult.success) {
+    const nativeMemory = verifiedOutcome && action?.status === 'completed' && !syntheticOutcome
+      ? await storeMemory({ agent: 'store', branchId: 'BRANCH-104', sessionId: actionId, kind: 'verified-operation-outcome', content: `${outcome.observed_event}. Action: ${outcome.action_taken}. Outcome: ${outcome.outcome_summary}. Follow-up: ${outcome.reobserved_metric}.` })
+      : { success: false, error: 'Only completed, verified operational outcomes are retained.' };
+    if (nativeMemory.success) {
       outcome.is_hindsight_stored = true;
-      outcome.hindsight_id = retainResult.documentId;
+      outcome.hindsight_id = nativeMemory.memory?.id;
       outcome.evidence_source = outcomeData.evidence_source || 'unverified';
-      db.updateActionOutcome(outcome.id, { is_hindsight_stored: true, hindsight_id: retainResult.documentId, evidence_source: outcome.evidence_source });
+      db.updateActionOutcome(outcome.id, { is_hindsight_stored: true, hindsight_id: nativeMemory.memory?.id, evidence_source: outcome.evidence_source });
     }
 
     eventService.recordEvent({
@@ -907,8 +894,8 @@ export const storeAgentTools = {
     return {
       success: true,
       outcomeId: outcome.id,
-      hindsightStored: retainResult.success,
-      hindsightError: retainResult.success ? undefined : 'The outcome was recorded, but Hindsight did not confirm retention. Check server-side HINDSIGHT_BASE_URL and HINDSIGHT_API_KEY, then retry.',
+      hindsightStored: nativeMemory.success,
+      hindsightError: nativeMemory.success ? undefined : `Outcome recorded; memory persistence was not confirmed. ${nativeMemory.error || 'No persisted memory was returned.'}`,
       roiReport,
       outcome
     };
@@ -1010,7 +997,7 @@ export const storeAgentTools = {
     });
 
     // Retain in Store Hindsight for learning substitution preferences
-    hindsightService.retainStoreOperationalExperience({
+    memoryService.retainStoreOperationalExperience({
       situation: `Customer requested unavailable ${orig?.name || originalProductId}; system recommended ${sub?.name || substituteProductId}`,
       actionTaken: `Offered substitute product ${sub?.name || substituteProductId}`,
       outcome: accepted ? 'Customer accepted substitution' : 'Customer rejected substitution',
@@ -1118,7 +1105,7 @@ export const storeAgentTools = {
       totalUnfulfilledDemand,
       estimatedLostSalesValue,
       excessInventoryAvoidedUnits: recs.filter(r => r.type === 'OVERSTOCK' && (r.status === 'approved' || r.status === 'pending')).length * 20,
-      wastageReduced: 'Estimated ₹1,200/wk from shelf rotation',
+      wastageReduced: 'Estimated â‚¹1,200/wk from shelf rotation',
       successfulRestocks,
       failedRestocks,
       recommendationAcceptanceRate: `${acceptanceRate}%`,
@@ -1407,3 +1394,5 @@ export const GROQ_STORE_TOOL_DEFINITIONS = [
     }
   }
 ];
+
+

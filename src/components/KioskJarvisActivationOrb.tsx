@@ -41,7 +41,7 @@ export const KioskJarvisActivationOrb: React.FC<KioskJarvisActivationOrbProps> =
       setAudioLevel(0.4 + Math.random() * 0.6);
     }, 120);
 
-    // 3. Synthesize JARVIS Speech: "Kiosk 3 is active. You can use it."
+    // 3. Synthesize the activation announcement.
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel(); // Stop any pending utterances
       const utterance = new SpeechSynthesisUtterance(message);
@@ -216,7 +216,7 @@ export const KioskJarvisActivationOrb: React.FC<KioskJarvisActivationOrbProps> =
           />
         </svg>
 
-        {/* Central JARVIS Symbol */}
+        {/* Central GrocerAI voice-assistant symbol */}
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center pointer-events-none">
           <motion.div
             animate={{ scale: [1, 1.15, 1] }}
@@ -226,7 +226,7 @@ export const KioskJarvisActivationOrb: React.FC<KioskJarvisActivationOrbProps> =
             <BrainCircuit className="w-8 h-8 text-cyan-300 animate-pulse" />
           </motion.div>
           <span className="mt-2 text-[10px] font-mono font-bold tracking-widest text-cyan-300 uppercase">
-            JARVIS
+            GROCERAI
           </span>
         </div>
       </div>

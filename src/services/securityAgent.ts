@@ -1,7 +1,7 @@
-import { db } from './db.js';
+﻿import { db } from './db.js';
 import { backendAuthority } from '../server/backendAuthority.js';
-import { hindsightService } from './hindsightService.js';
-import { hindsightEngine } from './hindsightEngine.js';
+import { memoryService } from './nativeMemoryService.js';
+import { getRelevantContext, storeMemory } from '../server/memoryEngine.js';
 import {
   SecurityEvent,
   SecurityEventType,
@@ -182,7 +182,7 @@ class SecurityAgent {
       );
 
       // Retain security experience pattern
-      hindsightService.retainSecurityExperience({
+      memoryService.retainSecurityExperience({
         incidentType: 'QR_ANOMALY',
         pattern: `${eventType} scan with prefix ${token.substring(0, 8)}`,
         investigationDetails: res.error || 'Token lookup in secure repository failed or token expired/revoked.',
@@ -215,7 +215,7 @@ class SecurityAgent {
         attemptingCustomerId
       );
 
-      hindsightService.retainSecurityExperience({
+      memoryService.retainSecurityExperience({
         incidentType: 'QR_ANOMALY',
         pattern: `Cross-customer identity token presentation: Token of ${res.customer.customer_id} used by ${attemptingCustomerId}`,
         investigationDetails: 'Customer identity verification identified attempted profile cross-linking.',
@@ -246,7 +246,7 @@ class SecurityAgent {
       );
 
       if (isHijack) {
-        hindsightService.retainSecurityExperience({
+        memoryService.retainSecurityExperience({
           incidentType: 'SESSION_ANOMALY',
           pattern: `Cross-customer session takeover attempt (target: ${targetSessionId})`,
           investigationDetails: 'Customer identity on mobile companion differed from original kiosk session creator.',
@@ -277,16 +277,16 @@ class SecurityAgent {
       this.logEvent(
         'CART_TAMPER_DETECTED',
         'critical',
-        `Cart integrity violation: Reported ₹${reportedSubtotal} differs from authoritative ₹${authSub} (diff ₹${diff})`,
+        `Cart integrity violation: Reported â‚¹${reportedSubtotal} differs from authoritative â‚¹${authSub} (diff â‚¹${diff})`,
         { reportedSubtotal, authoritativeSubtotal: authSub, difference: diff },
         sessionIdOrCustomerId.startsWith('SESS') ? sessionIdOrCustomerId : undefined,
         !sessionIdOrCustomerId.startsWith('SESS') ? sessionIdOrCustomerId : undefined
       );
 
-      hindsightService.retainSecurityExperience({
+      memoryService.retainSecurityExperience({
         incidentType: 'TRANSACTION_ANOMALY',
-        pattern: `Client-side subtotal manipulation (attempted ₹${reportedSubtotal} vs authoritative ₹${authSub})`,
-        investigationDetails: `Discrepancy of ₹${diff} detected during price calculation stage.`,
+        pattern: `Client-side subtotal manipulation (attempted â‚¹${reportedSubtotal} vs authoritative â‚¹${authSub})`,
+        investigationDetails: `Discrepancy of â‚¹${diff} detected during price calculation stage.`,
         resolution: 'Enforced catalog prices authoritatively; discarded client-supplied pricing.',
         outcomeTakeaway: 'Catalog source-of-truth prevented revenue leakage.'
       });
@@ -442,40 +442,40 @@ class SecurityAgent {
    * 2. Physical Observation (Camera / CV sensor count)
    * 3. Authoritative Inventory (Store state & expected movement)
    * 
-   * Connects to Security Hindsight to retrieve past resolution patterns as contextual evidence.
+   * Retrieves native Security Agent memory as contextual evidence.
    */
   public async verifyPhysicalCheckout(sessionId: string, customerId?: string): Promise<CheckoutVerificationResult> {
     const result = backendAuthority.verifyPhysicalCheckout(sessionId, customerId);
 
-    // If discrepancy detected, enrich with recalled Security Hindsight context
+    // If a discrepancy is detected, enrich it with recalled security memory.
     if (result.hasDiscrepancy) {
       try {
         const query = `quantity mismatch checkout correction ${result.comparison.map(c => c.product_name).join(' ')}`;
-        const memories = await hindsightService.recallSecurityMemories(query);
+        const memories = await memoryService.recallSecurityMemories(query);
         result.recalledSecurityHindsight = (memories.results || []).map(m => {
           const lines = m.text.split('\n');
           return {
-            pattern: lines.find(l => l.startsWith('Observed Pattern:'))?.replace('Observed Pattern:', '').trim() || lines[0] || '',
+            pattern: lines.find(l => l.startsWith('Pattern:'))?.replace('Pattern:', '').trim() || lines[0] || '',
             resolution: lines.find(l => l.startsWith('Resolution:'))?.replace('Resolution:', '').trim() || '',
-            takeaway: lines.find(l => l.startsWith('Takeaway:'))?.replace('Takeaway:', '').trim() || m.text
+            takeaway: lines.find(l => l.startsWith('Outcome:'))?.replace('Outcome:', '').trim() || m.text
           };
         });
         if (memories.success && memories.results?.length) {
-          const reflection = await hindsightService.reflect(
-            hindsightService.getSecurityBank(),
+          const reflection = await memoryService.reflect(
+            memoryService.getSecurityBank(),
             query,
             { context: `Current checkout comparison: ${JSON.stringify(result.comparison)}. Recalled evidence: ${memories.results.map(m => m.text).join(' | ')}. Treat the result as contextual inference only; use current checkout records as authority.` }
           );
           if (reflection.success) {
             result.recalledSecurityHindsight.push({
-              pattern: 'Hindsight reflection (inference)',
+              pattern: 'Native memory reflection (inference)',
               resolution: '',
               takeaway: reflection.answer
             });
           }
         }
       } catch (err) {
-        console.warn('[SecurityAgent] Security Hindsight recall failed gracefully:', err);
+        console.warn('[SecurityAgent] Native security memory recall failed gracefully:', err);
       }
     }
 
@@ -495,7 +495,7 @@ class SecurityAgent {
     const outcome = await backendAuthority.resolveCheckoutDiscrepancy(params);
 
     const memory = outcome.success
-      ? await hindsightService.retainSecurityExperience({
+      ? await memoryService.retainSecurityExperience({
           incidentType: 'TRANSACTION_ANOMALY',
           pattern: 'Physical checkout quantity discrepancy',
           investigationDetails: 'The digital cart and physical basket differed; the customer or staff completed the selected correction.',
@@ -532,11 +532,11 @@ class SecurityAgent {
       this.logEvent(
         'CART_TAMPER_DETECTED',
         'critical',
-        `Payment amount tampering detected: Attempted ₹${amount}, Authoritative Total is ₹${auth.total}`,
+        `Payment amount tampering detected: Attempted â‚¹${amount}, Authoritative Total is â‚¹${auth.total}`,
         { attemptedAmount: amount, authoritativeTotal: auth.total },
         sessionIdOrCustomerId.startsWith('SESS') ? sessionIdOrCustomerId : undefined
       );
-      return { allowed: false, reason: `Total amount mismatch. Authoritative total is ₹${auth.total}.` };
+      return { allowed: false, reason: `Total amount mismatch. Authoritative total is â‚¹${auth.total}.` };
     }
 
     // Physical Checkout Verification Check
@@ -795,8 +795,8 @@ class SecurityAgent {
    * AI INVOCATION GATE & AMBIGUOUS ANOMALY REASONING (SEC-20, SEC-21)
    *
    * Business Principles:
-   * 1. ₹1 spend chesi ₹0.50 save cheyyakudadhu: No LLM when deterministic logic suffices.
-   * 2. Mismatch ≠ theft: Never accuse customer of theft.
+   * 1. â‚¹1 spend chesi â‚¹0.50 save cheyyakudadhu: No LLM when deterministic logic suffices.
+   * 2. Mismatch â‰  theft: Never accuse customer of theft.
    * 3. Cannot bypass auth, cannot change payment/inventory.
    */
   public async analyzeAmbiguousAnomaly(context: AmbiguousAnomalyContext): Promise<SecurityAnalysisResult> {
@@ -818,18 +818,11 @@ class SecurityAgent {
     let historicalPatterns: string[] = [];
     try {
       const query = context.behaviorContext || (context.events?.map(e => e.type).join(' ') || 'shopping pattern');
-      const memories = await hindsightService.recallSecurityMemories(query);
-      historicalPatterns = (memories.results || []).map(m => m.text.split('\n')[0]);
-      if (memories.success && memories.results?.length) {
-        const reflection = await hindsightService.reflect(
-          hindsightService.getSecurityBank(),
-          query,
-          { context: `Observed events: ${JSON.stringify(context.events || [])}. Behavior: ${context.behaviorContext || 'unspecified'}. Recalled evidence: ${memories.results.map(m => m.text).join(' | ')}. Never infer guilt or bypass human authorization.` }
-        );
-        if (reflection.success) historicalPatterns.push(`Hindsight reflection (inference): ${reflection.answer}`);
-      }
+      const memories = await getRelevantContext({ agent: 'security', branchId: 'BRANCH-104', query });
+      historicalPatterns = memories.memories.map(m => m.content.split('\n')[0]);
+      historicalPatterns.push(...memories.reflections);
     } catch (err) {
-      console.warn('[SecurityAgent] Hindsight recall failed gracefully:', err);
+      console.warn('[SecurityAgent] Native memory recall failed gracefully:', err);
     }
 
     const behaviorLower = (context.behaviorContext || '').toLowerCase();
@@ -949,6 +942,11 @@ class SecurityAgent {
     resolutionNote: string
   ): Promise<{ success: boolean; memoryRetained: boolean }> {
     const incidentType = isFalsePositive ? 'FALSE_POSITIVE' : 'TRUE_INCIDENT';
+    const nativeMemory = await storeMemory({
+      agent: 'security', branchId: 'BRANCH-104', kind: isFalsePositive ? 'false-positive-resolution' : 'verified-incident-outcome',
+      content: `Incident ${incidentType} resolved. ${resolutionNote}`,
+      metadata: { resolution: isFalsePositive ? 'false-positive' : 'confirmed' }
+    });
 
     if (isFalsePositive) {
       this.logEvent(
@@ -959,17 +957,7 @@ class SecurityAgent {
       );
     }
 
-    const memory = await hindsightService.retainSecurityExperience({
-      incidentType,
-      pattern: `Security incident ${incidentId} review`,
-      investigationDetails: `Security review conducted. Categorized as ${incidentType}. Note: ${resolutionNote}`,
-      resolution: resolutionNote,
-      outcomeTakeaway: isFalsePositive
-        ? 'Pattern documented as benign edge case; future similar shopping behavior prioritized as benign.'
-        : 'Confirmed security anomaly resolved; deterministic rules and audit trails strengthened.'
-    });
-
-    return { success: true, memoryRetained: memory.success };
+    return { success: true, memoryRetained: nativeMemory.success };
   }
 
   /**
@@ -982,7 +970,7 @@ class SecurityAgent {
     if (!authCheck.valid) {
       return {
         valid: false,
-        error: `Authentication failed: ${authCheck.error}. Hindsight memory cannot grant authorization.`
+        error: `Authentication failed: ${authCheck.error}. Saved memory cannot grant authorization.`
       };
     }
     return { valid: true };
@@ -1108,7 +1096,8 @@ class SecurityAgent {
    * Recall past security patterns for investigation context.
    */
   public async recallSecurityContext(query: string) {
-    return hindsightService.recallSecurityMemories(query);
+    const result = await getRelevantContext({ agent: 'security', branchId: 'BRANCH-104', query });
+    return { success: result.success, results: result.memories.map(m => ({ id: m.id, text: m.content })), error: result.error };
   }
 
   /**
@@ -1171,7 +1160,7 @@ class SecurityAgent {
       deterministicCheck = {
         checkType: triggeringRule,
         difference: event.metadata.difference,
-        rawResult: `Authoritative: ₹${event.metadata.authoritativeSubtotal}, Reported: ₹${event.metadata.reportedSubtotal}, Difference: ₹${event.metadata.difference}`
+        rawResult: `Authoritative: â‚¹${event.metadata.authoritativeSubtotal}, Reported: â‚¹${event.metadata.reportedSubtotal}, Difference: â‚¹${event.metadata.difference}`
       };
     } else if (event.metadata?.error) {
       deterministicCheck = {
@@ -1328,3 +1317,5 @@ class SecurityAgent {
 }
 
 export const securityAgent = new SecurityAgent();
+
+

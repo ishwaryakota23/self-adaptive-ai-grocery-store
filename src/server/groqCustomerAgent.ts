@@ -1,8 +1,8 @@
-declare const process: any;
+﻿declare const process: any;
 
 import { GROQ_TOOL_DEFINITIONS, executeCustomerAgentTool, ToolExecutionResult } from '../services/customerAgentTools.js';
 import { languageDetector, LanguageDetectionResult } from '../services/languageDetector.js';
-import { hindsightService } from '../services/hindsightService.js';
+import { getRelevantContext, storeMemory } from './memoryEngine.js';
 import { db } from '../services/db.js';
 import { Product, ShoppingMission, CartItem } from '../types/index.js';
 
@@ -82,6 +82,7 @@ export interface GroqAgentResponse {
   is_code_mixed: boolean;
   intent?: string;
   productFound?: Product;
+  recommendedProducts?: Product[];
   isAvailable?: boolean;
   alternatives?: Product[];
   aisle?: string;
@@ -134,43 +135,34 @@ export class GroqCustomerAgentServer {
     const cart = db.getCart(sessionId).length > 0 ? db.getCart(sessionId) : (resolvedCustomerId ? db.getCart(resolvedCustomerId) : []);
     const cartTotals = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
-    // Recall only memories actually stored in this authenticated customer's Hindsight bank.
+    // Recall only records in this authenticated customer's native memory scope.
     let memoryPromptInjection = '';
     let recalledMemoriesList: string[] = [];
     let memoryRecallError = '';
     let memoryStatus: 'retrieved' | 'empty' | 'unavailable' | 'not_attempted' = 'not_attempted';
     if (resolvedCustomerId) {
       try {
-        const recallPromise = hindsightService.recallCustomerMemories(resolvedCustomerId, input);
-        const timeoutPromise = new Promise<{ success: boolean; results: any[]; promptString: string; error?: string }>(
-          resolve => setTimeout(() => resolve({ success: false, results: [], promptString: '', error: 'Hindsight recall timed out after 2.5 seconds.' }), 2500)
+        const recallPromise = getRelevantContext({ agent: 'customer', userId: resolvedCustomerId, query: input });
+        const timeoutPromise = new Promise<{ success: boolean; memories: any[]; context: string; reflections: string[]; error?: string }>(
+          resolve => setTimeout(() => resolve({ success: false, memories: [], context: '', reflections: [], error: 'Native memory recall timed out after 2.5 seconds.' }), 2500)
         );
         const hsRecall = await Promise.race([recallPromise, timeoutPromise]);
-        if (hsRecall.success && hsRecall.results.length > 0) {
-          recalledMemoriesList = hsRecall.results.map(r => r.text);
+        if (hsRecall.success && hsRecall.memories.length > 0) {
+          recalledMemoriesList = hsRecall.memories.map(r => r.content);
           memoryStatus = 'retrieved';
-          const reflection = await Promise.race([
-            hindsightService.reflect(
-              hindsightService.getCustomerBank(resolvedCustomerId),
-              input,
-              { context: `Use only these recalled customer memories; current request: ${input}` }
-            ),
-            new Promise<{ success: boolean; answer: string }>(resolve => setTimeout(() => resolve({ success: false, answer: '' }), 2500))
-          ]);
-          memoryPromptInjection = `\nPAST EXPERIENCES & PREFERENCES FROM PREVIOUS VISITS (Hindsight Memory):\n` +
-            recalledMemoriesList.slice(0, 4).map(t => `- ${t}`).join('\n') +
-            (reflection.success ? `\nHINDSIGHT REFLECTION (inference, verify against the recalled facts): ${reflection.answer}\n` : '') +
+          memoryPromptInjection = `\nPAST EXPERIENCES & PREFERENCES FROM PREVIOUS VISITS (GrocerAI Memory):\n` +
+            hsRecall.context +
             `\nCRITICAL: Personalize suggestions, adhere to dietary bounds, and respect past preferences.\n`;
         } else if (hsRecall.success) {
           memoryStatus = 'empty';
         } else {
           memoryStatus = 'unavailable';
-          memoryRecallError = hsRecall.error || 'Hindsight recall failed.';
+          memoryRecallError = hsRecall.error || 'Native memory recall failed.';
         }
       } catch (err: any) {
         memoryStatus = 'unavailable';
-        memoryRecallError = err?.message || 'Hindsight recall failed.';
-        console.warn('[CustomerAgent] Hindsight recall failed gracefully:', err?.message || err);
+        memoryRecallError = err?.message || 'Native memory recall failed.';
+        console.warn('[CustomerAgent] Native memory recall failed gracefully:', err?.message || err);
       }
     }
 
@@ -221,7 +213,7 @@ export class GroqCustomerAgentServer {
       return {
         success: false,
         groqConfigured: false,
-        message: `Groq AI is not configured on the backend. Set GROQ_API_KEY in the server environment. Customer memory recall was attempted independently.${memoryRecallError ? ` Hindsight recall issue: ${memoryRecallError}` : ''}`,
+        message: `Groq AI is not configured on the backend. Set GROQ_API_KEY in the server environment. Customer memory recall was attempted independently.${memoryRecallError ? ` Memory recall issue: ${memoryRecallError}` : ''}`,
         detected_language: langResult.detected_language,
         response_language: langResult.response_language,
         is_code_mixed: langResult.is_code_mixed,
@@ -236,15 +228,15 @@ export class GroqCustomerAgentServer {
 
     // Build comprehensive System Prompt
     const offeredOptionsContext = (req.activeProductContext?.productOptions || []).map((option, index) => `${index + 1}. ${option.name} | brand=${option.brand} | productId=${option.productId}${option.skuId ? ` | sku=${option.skuId}` : ''}`).join('\n');
-    const systemPrompt = `You are GrocerAI (JARVIS), an intelligent, conversational supermarket shopping assistant and culinary advisor for customer session ${sessionId} (Customer: ${resolvedCustomerId}).
-Context: Session=${sessionId}, Customer=${resolvedCustomerId}, Language=${activeLang || langResult.detected_language || 'en'}, Cart=${cart.length} items (₹${cartTotals}), PrevProduct=${req.activeProductContext?.productName || 'None'}.
-Previously offered catalogue records (use these exact product IDs when the customer selects one):\n${offeredOptionsContext || 'None'}.${memoryPromptInjection}${memoryRecallError ? `\nHINDSIGHT RECALL FAILED: ${memoryRecallError}. Do not claim saved preferences or past customer experiences; tell the customer that saved memories could not be loaded and continue without them.\n` : ''}
+    const systemPrompt = `You are GrocerAI's Alexa+ inspired conversational grocery shopping assistant and culinary advisor for customer session ${sessionId} (Customer: ${resolvedCustomerId}).
+Context: Session=${sessionId}, Customer=${resolvedCustomerId}, Language=${activeLang || langResult.detected_language || 'en'}, Cart=${cart.length} items (â‚¹${cartTotals}), PrevProduct=${req.activeProductContext?.productName || 'None'}.
+Previously offered catalogue records (use these exact product IDs when the customer selects one):\n${offeredOptionsContext || 'None'}.${memoryPromptInjection}${memoryRecallError ? `\nNATIVE MEMORY RECALL FAILED: ${memoryRecallError}. Do not claim saved preferences or past customer experiences; tell the customer that saved memories could not be loaded and continue without them.\n` : ''}
 
 Core Instructions:
-0. Memory honesty: Claim a past preference or experience only when it appears in the Hindsight memories supplied below. If recall is empty or unavailable, say you do not have that past information; do not invent it.
+0. Memory honesty: Claim a past preference or experience only when it appears in the retrieved native memories supplied below. If recall is empty or unavailable, say you do not have that past information; do not invent it.
 1. Multilingual Fluency: Always respond in the customer's chosen language (${activeLang || langResult.detected_language || 'en'}).
-   - Telugu: If the customer asks in Telugu or Telugu-English code-mix (e.g. "బ్రౌన్ బ్రెడ్ కార్ట్ లో వేయి", "నాకు పాలు కావాలి", "హే జార్విస్", "బ్రేక్‌ఫాస్ట్ కి ఏమి చేయాలి?"), reply warmly and naturally in Telugu.
-   - Hindi: If in Hindi (e.g. "ब्राउन ब्रेड कार्ट में जोड़ें", "पनीर कहाँ है?"), reply warmly and naturally in Hindi.
+   - Telugu: If the customer asks in Telugu or Telugu-English code-mix (e.g. "à°¬à±à°°à±Œà°¨à± à°¬à±à°°à±†à°¡à± à°•à°¾à°°à±à°Ÿà± à°²à±‹ à°µà±‡à°¯à°¿", "à°¨à°¾à°•à± à°ªà°¾à°²à± à°•à°¾à°µà°¾à°²à°¿", "à°¹à±‡ à°…à°²à±†à°•à±à°¸à°¾", "à°¬à±à°°à±‡à°•à±â€Œà°«à°¾à°¸à±à°Ÿà± à°•à°¿ à°à°®à°¿ à°šà±‡à°¯à°¾à°²à°¿?"), reply warmly and naturally in Telugu.
+   - Hindi: If in Hindi (e.g. "à¤¬à¥à¤°à¤¾à¤‰à¤¨ à¤¬à¥à¤°à¥‡à¤¡ à¤•à¤¾à¤°à¥à¤Ÿ à¤®à¥‡à¤‚ à¤œà¥‹à¤¡à¤¼à¥‡à¤‚", "à¤ªà¤¨à¥€à¤° à¤•à¤¹à¤¾à¤ à¤¹à¥ˆ?"), reply warmly and naturally in Hindi.
    - English: If in English, reply in natural, friendly English.
 2. Cart actions: Resolve products, prices, stock, cart totals, and locations through live tools. Ask which brand or size when a generic request matches multiple products; never choose a default or top-rated SKU. Confirm a mutation only after its tool succeeds and the resulting cart is verified.
 3. Keep replies specific and concise. Use tool results for catalogue facts; do not invent nutrition facts, stock, prices, or locations.
@@ -278,6 +270,7 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
       const cartMutationKeys = new Set<string>();
     let updatedProductContext: CustomerProductContext | undefined = req.activeProductContext;
     let offeredProducts = req.activeProductContext?.productOptions || [];
+    let recommendedProducts: Product[] = [];
     let identifiedProduct: Product | undefined;
     let isAvailableResult: boolean | undefined;
     let dynamicSubstitutes: Product[] = [];
@@ -436,6 +429,13 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
             identifiedProduct = db.getProductById(execRes.result.productId);
           }
           if (fnName === 'searchProducts' && execRes.success && Array.isArray(execRes.result?.products)) {
+            recommendedProducts = execRes.result.products
+              .filter((entry: any) => entry.in_stock)
+              .flatMap((entry: any) => {
+                const product = db.getProductById(String(entry.id || ''));
+                return product ? [product] : [];
+              })
+              .slice(0, 4);
             offeredProducts = execRes.result.products.flatMap((entry: any) => {
               const product = db.getProductById(String(entry.id || ''));
               return product ? [{ productId: product.id, name: product.name, brand: product.brand, skuId: product.sku_id }] : [];
@@ -507,21 +507,21 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
             if (addedExec?.result?.added) {
               const p = addedExec.result.added;
               finalReply = langResult.response_language === 'te'
-                ? `నేను మీ కార్ట్‌కి ${p.name} (₹${p.unitPrice}) జోడించాను! మీ మొత్తం: ₹${addedExec.result.cartTotal}.`
+                ? `à°¨à±‡à°¨à± à°®à±€ à°•à°¾à°°à±à°Ÿà±â€Œà°•à°¿ ${p.name} (â‚¹${p.unitPrice}) à°œà±‹à°¡à°¿à°‚à°šà°¾à°¨à±! à°®à±€ à°®à±Šà°¤à±à°¤à°‚: â‚¹${addedExec.result.cartTotal}.`
                 : langResult.response_language === 'hi'
-                ? `मैंने आपके कार्ट में ${p.name} (₹${p.unitPrice}) जोड़ दिया है! आपका नया कुल: ₹${addedExec.result.cartTotal}.`
-                : `I've added ${p.name} (₹${p.unitPrice}) to your cart! Your new cart total is ₹${addedExec.result.cartTotal}.`;
+                ? `à¤®à¥ˆà¤‚à¤¨à¥‡ à¤†à¤ªà¤•à¥‡ à¤•à¤¾à¤°à¥à¤Ÿ à¤®à¥‡à¤‚ ${p.name} (â‚¹${p.unitPrice}) à¤œà¥‹à¤¡à¤¼ à¤¦à¤¿à¤¯à¤¾ à¤¹à¥ˆ! à¤†à¤ªà¤•à¤¾ à¤¨à¤¯à¤¾ à¤•à¥à¤²: â‚¹${addedExec.result.cartTotal}.`
+                : `I've added ${p.name} (â‚¹${p.unitPrice}) to your cart! Your new cart total is â‚¹${addedExec.result.cartTotal}.`;
             } else if (identifiedProduct) {
               finalReply = langResult.response_language === 'te'
-                ? `మీరు ${identifiedProduct.name} ని ${identifiedProduct.aisle} లో ₹${identifiedProduct.price} కి పొందవచ్చు.`
+                ? `à°®à±€à°°à± ${identifiedProduct.name} à°¨à°¿ ${identifiedProduct.aisle} à°²à±‹ â‚¹${identifiedProduct.price} à°•à°¿ à°ªà±Šà°‚à°¦à°µà°šà±à°šà±.`
                 : langResult.response_language === 'hi'
-                ? `आप ${identifiedProduct.name} को ${identifiedProduct.aisle} में ₹${identifiedProduct.price} में प्राप्त कर सकते हैं.`
-                : `You can find ${identifiedProduct.name} in ${identifiedProduct.aisle} for ₹${identifiedProduct.price}.`;
+                ? `à¤†à¤ª ${identifiedProduct.name} à¤•à¥‹ ${identifiedProduct.aisle} à¤®à¥‡à¤‚ â‚¹${identifiedProduct.price} à¤®à¥‡à¤‚ à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤° à¤¸à¤•à¤¤à¥‡ à¤¹à¥ˆà¤‚.`
+                : `You can find ${identifiedProduct.name} in ${identifiedProduct.aisle} for â‚¹${identifiedProduct.price}.`;
             } else {
               finalReply = langResult.response_language === 'te'
-                ? "నేను స్టోర్ కేటలాగ్ వివరాలను కనుగొన్నాను. మీకు ఇంకా ఏమి కావాలో చెప్పండి!"
+                ? "à°¨à±‡à°¨à± à°¸à±à°Ÿà±‹à°°à± à°•à±‡à°Ÿà°²à°¾à°—à± à°µà°¿à°µà°°à°¾à°²à°¨à± à°•à°¨à±à°—à±Šà°¨à±à°¨à°¾à°¨à±. à°®à±€à°•à± à°‡à°‚à°•à°¾ à°à°®à°¿ à°•à°¾à°µà°¾à°²à±‹ à°šà±†à°ªà±à°ªà°‚à°¡à°¿!"
                 : langResult.response_language === 'hi'
-                ? "मुझे स्टोर में उपलब्ध वस्तुएं मिल गई हैं। बताइए मैं आपकी और क्या मदद करूँ?"
+                ? "à¤®à¥à¤à¥‡ à¤¸à¥à¤Ÿà¥‹à¤° à¤®à¥‡à¤‚ à¤‰à¤ªà¤²à¤¬à¥à¤§ à¤µà¤¸à¥à¤¤à¥à¤à¤‚ à¤®à¤¿à¤² à¤—à¤ˆ à¤¹à¥ˆà¤‚à¥¤ à¤¬à¤¤à¤¾à¤‡à¤ à¤®à¥ˆà¤‚ à¤†à¤ªà¤•à¥€ à¤”à¤° à¤•à¥à¤¯à¤¾ à¤®à¤¦à¤¦ à¤•à¤°à¥‚à¤?"
                 : "I found those items in our store catalog. Would you like me to add them to your cart?";
             }
           }
@@ -537,6 +537,7 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
             response_language: langResult.response_language,
             is_code_mixed: langResult.is_code_mixed,
             productFound: identifiedProduct,
+            recommendedProducts,
             isAvailable: isAvailableResult,
             alternatives: dynamicSubstitutes.length > 0 ? dynamicSubstitutes : undefined,
             aisle: detectedAisle || identifiedProduct?.aisle,
@@ -561,11 +562,12 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
           return {
             success: true,
             groqConfigured: true,
-            message: `Your cart was updated: ${completedAdd ? `added ${itemName}` : `removed ${itemName}`}. It now has ${itemCount} items and totals ₹${total}. The AI response step failed: ${providerError.message}`,
+            message: `Your cart was updated: ${completedAdd ? `added ${itemName}` : `removed ${itemName}`}. It now has ${itemCount} items and totals â‚¹${total}. The AI response step failed: ${providerError.message}`,
             detected_language: langResult.detected_language,
             response_language: langResult.response_language,
             is_code_mixed: langResult.is_code_mixed,
             productFound: identifiedProduct,
+            recommendedProducts,
             quickActions: this.buildQuickActions(toolExecutions, identifiedProduct, dynamicSubstitutes, sessionId),
             toolExecutions,
             activeProductContext: updatedProductContext,
@@ -582,6 +584,8 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
           detected_language: langResult.detected_language,
           response_language: langResult.response_language,
           is_code_mixed: langResult.is_code_mixed,
+          productFound: identifiedProduct,
+          recommendedProducts,
           recalledMemories: recalledMemoriesList,
           memoryStatus,
           error: `GROQ_HTTP_${secondResponse.status}${providerError.code ? `_${providerError.code}` : ''}`
@@ -617,6 +621,7 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
         detected_language: langResult.detected_language,
         response_language: langResult.response_language,
         is_code_mixed: langResult.is_code_mixed,
+        recommendedProducts,
         recalledMemories: recalledMemoriesList,
         memoryStatus,
         error: `GROQ_NETWORK_ERROR: ${errorMessage}`
@@ -678,7 +683,7 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
       const isStocked = (db.getInventoryByProductId(product.id)?.quantity || 0) > 0;
       if (isStocked) {
         actions.push({
-          label: `Add to Cart (₹${product.price})`,
+          label: `Add to Cart (â‚¹${product.price})`,
           action: 'add_to_cart'
         });
         actions.push({
@@ -733,14 +738,8 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
 
       if (!isPref) return undefined;
 
-      // Retain in the persistent, isolated Hindsight bank and report only a
-      // confirmed memory identifier.
-      const retained = await hindsightService.retainCustomerExperience({
-        customerId,
-        observation: input,
-        context: `Customer preference/habit declared during session ${sessionId}`,
-        tags: ['preference', lang]
-      });
+      // Retain only an explicit preference for this verified customer.
+      const nativeRetained = await storeMemory({ agent: 'customer', userId: customerId, kind: 'preference', content: input, metadata: { language: lang } });
 
       // 2. Update persistent DB structured customer preferences
       const existing = db.getCustomerPreferences(customerId);
@@ -753,7 +752,7 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
       if ((lower.includes('low-sugar') || lower.includes('low sugar') || lower.includes('less sugar')) && !newDiet.includes('Low Sugar')) newDiet.push('Low Sugar');
 
       let budgetMax = existing?.budget_max || 2000;
-      const budgetMatch = lower.match(/(?:under|below|budget|within)\s*(?:₹|rs\.?|inr)?\s*(\d+)/i);
+      const budgetMatch = lower.match(/(?:under|below|budget|within)\s*(?:â‚¹|rs\.?|inr)?\s*(\d+)/i);
       if (budgetMatch && budgetMatch[1]) {
         budgetMax = parseInt(budgetMatch[1], 10);
       }
@@ -768,7 +767,8 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
         budget_max: budgetMax,
         preferred_brands: preferredBrands
       });
-      return retained.success ? retained.memoryId : undefined;
+      if (!nativeRetained.success) console.warn('[CustomerAgent] Native memory persistence was not confirmed:', nativeRetained.error);
+      return nativeRetained.success ? nativeRetained.memory?.id : undefined;
     } catch (err: any) {
       console.warn('[CustomerAgent] Preference retention fallback:', err?.message || err);
       return undefined;
@@ -777,3 +777,5 @@ CRITICAL VERIFIED-ACTION POLICY (overrides any conflicting example above):
 }
 
 export const groqCustomerAgentServer = new GroqCustomerAgentServer();
+
+

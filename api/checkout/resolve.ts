@@ -1,5 +1,5 @@
-import { backendAuthority } from '../../src/server/backendAuthority.js';
-import { hindsightService } from '../../src/services/hindsightService.js';
+﻿import { backendAuthority } from '../../src/server/backendAuthority.js';
+import { memoryService } from '../../src/services/nativeMemoryService.js';
 import { getRequestBody, handleCors, sendJson } from '../_utils.js';
 import { authenticateManagerRequest } from '../_auth.js';
 
@@ -31,7 +31,7 @@ export default async function handler(req: any, res: any) {
     });
 
     // Retain resolution in Security Hindsight
-    await hindsightService.retainSecurityExperience({
+    await memoryService.retainSecurityExperience({
       incidentType: 'TRANSACTION_ANOMALY',
       pattern: `Physical checkout discrepancy (Session ${sessionId})`,
       investigationDetails: `Computer vision detected basket mismatch. Customer prompted with non-accusatory cart verification.`,
@@ -49,3 +49,6 @@ export default async function handler(req: any, res: any) {
     });
   }
 }
+
+
+

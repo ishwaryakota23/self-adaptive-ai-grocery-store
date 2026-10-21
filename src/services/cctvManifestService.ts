@@ -1,6 +1,6 @@
-import { db } from './db.js';
+﻿import { db } from './db.js';
 import { securityAgent } from './securityAgent.js';
-import { hindsightService } from './hindsightService.js';
+import { memoryService } from './nativeMemoryService.js';
 import {
   CCTVVideoEntry,
   CCTVCameraStatus,
@@ -22,7 +22,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/CCTV Aisle Shoplifting Sequence.gif',
     file_name: 'CCTV Aisle Shoplifting Sequence.gif',
     camera_id: 'CAM-04B',
-    camera_label: 'CAM-04B · Aisle 2 (Pantry & Snacks)',
+    camera_label: 'CAM-04B Â· Aisle 2 (Pantry & Snacks)',
     scenario_type: 'product_concealment',
     scenario_title: 'Product Concealment (Jacket / Clothing)',
     severity: 'HIGH',
@@ -49,7 +49,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/CCTV Supermarket Aisle Sequence.gif',
     file_name: 'CCTV Supermarket Aisle Sequence.gif',
     camera_id: 'CAM-04B',
-    camera_label: 'CAM-04B · Aisle 3 (Dry Goods & Snacks)',
+    camera_label: 'CAM-04B Â· Aisle 3 (Dry Goods & Snacks)',
     scenario_type: 'woman_backpack_concealment',
     scenario_title: 'Product Concealment (Backpack)',
     severity: 'HIGH',
@@ -76,7 +76,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/CCTV Aisle Snapshot with Handbag and Box.png',
     file_name: 'CCTV Aisle Snapshot with Handbag and Box.png',
     camera_id: 'CAM-04B',
-    camera_label: 'CAM-04B · Aisle 3 (Cereals & Breakfast)',
+    camera_label: 'CAM-04B Â· Aisle 3 (Cereals & Breakfast)',
     scenario_type: 'handbag_concealment',
     scenario_title: 'Handbag Product Concealment',
     severity: 'HIGH',
@@ -102,7 +102,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/Supermarket CCTV Electrical Panel Incident.gif',
     file_name: 'Supermarket CCTV Electrical Panel Incident.gif',
     camera_id: 'CAM-01-AISLE-4',
-    camera_label: 'CAM-01 · Aisle 4 Pillar (Main Electrical Box)',
+    camera_label: 'CAM-01 Â· Aisle 4 Pillar (Main Electrical Box)',
     scenario_type: 'short_circuit',
     scenario_title: 'Electrical Hazard & Short Circuit',
     severity: 'CRITICAL',
@@ -129,7 +129,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/Supermarket Blackout_ Lights to Evacuation.gif',
     file_name: 'Supermarket Blackout_ Lights to Evacuation.gif',
     camera_id: 'CAM-FRONT-01',
-    camera_label: 'CAM-FRONT-01 · Main Floor & Checkout Bays',
+    camera_label: 'CAM-FRONT-01 Â· Main Floor & Checkout Bays',
     scenario_type: 'power_outage',
     scenario_title: 'Long-Duration Power Outage',
     severity: 'CRITICAL',
@@ -156,7 +156,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/CCTV Grocery Aisle Confrontation Sequence.gif',
     file_name: 'CCTV Grocery Aisle Confrontation Sequence.gif',
     camera_id: 'CAM-03-AISLE-3',
-    camera_label: 'CAM-03 · Aisle 3 (Grocery Central)',
+    camera_label: 'CAM-03 Â· Aisle 3 (Grocery Central)',
     scenario_type: 'fight_confrontation',
     scenario_title: 'Aggressive Aisle Confrontation',
     severity: 'HIGH',
@@ -183,7 +183,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/CCTV Supermarket Checkout Scuffle.png',
     file_name: 'CCTV Supermarket Checkout Scuffle.png',
     camera_id: 'CAM-CHECKOUT-CV-01',
-    camera_label: 'CAM-CHECKOUT-CV-01 · Checkout Counter 3',
+    camera_label: 'CAM-CHECKOUT-CV-01 Â· Checkout Counter 3',
     scenario_type: 'fight_checkout',
     scenario_title: 'Physical Scuffle at Checkout',
     severity: 'CRITICAL',
@@ -210,7 +210,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/CCTV Supermarket Scuffle.png',
     file_name: 'CCTV Supermarket Scuffle.png',
     camera_id: 'CAM-FRONT-01',
-    camera_label: 'CAM-FRONT-01 · Dairy Refrigeration Row',
+    camera_label: 'CAM-FRONT-01 Â· Dairy Refrigeration Row',
     scenario_type: 'physical_fight',
     scenario_title: 'Physical Fight in Grocery Aisle',
     severity: 'CRITICAL',
@@ -236,7 +236,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/10901926-hd_1920_1080_30fps.mp4',
     file_name: '10901926-hd_1920_1080_30fps.mp4',
     camera_id: 'CAM-FRONT-01',
-    camera_label: 'CAM-FRONT-01 · Entrance & Fresh Produce',
+    camera_label: 'CAM-FRONT-01 Â· Entrance & Fresh Produce',
     scenario_type: 'crowded_aisle',
     scenario_title: 'High Crowd & Aisle Congestion',
     severity: 'LOW',
@@ -261,7 +261,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/12655226_3834_2160_30fps.mp4',
     file_name: '12655226_3834_2160_30fps.mp4',
     camera_id: 'CAM-04B',
-    camera_label: 'CAM-04B · Aisle 2 (Packaged Foods)',
+    camera_label: 'CAM-04B Â· Aisle 2 (Packaged Foods)',
     scenario_type: 'normal_shopping',
     scenario_title: 'Normal Shopping (Cart Roll)',
     severity: 'LOW',
@@ -285,7 +285,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/5104001-uhd_3840_2160_30fps (1).mp4',
     file_name: '5104001-uhd_3840_2160_30fps (1).mp4',
     camera_id: 'CAM-04B',
-    camera_label: 'CAM-04B · Aisle 1 (Specialty Jars)',
+    camera_label: 'CAM-04B Â· Aisle 1 (Specialty Jars)',
     scenario_type: 'false_positive_repeated_shelf',
     scenario_title: 'Shelf Inspection (False Positive Demo)',
     severity: 'MEDIUM',
@@ -310,7 +310,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/4249560-uhd_3840_2160_25fps.mp4',
     file_name: '4249560-uhd_3840_2160_25fps.mp4',
     camera_id: 'CAM-CHECKOUT-CV-01',
-    camera_label: 'CAM-CHECKOUT-CV-01 · Counter Bay 1',
+    camera_label: 'CAM-CHECKOUT-CV-01 Â· Counter Bay 1',
     scenario_type: 'checkout_mismatch',
     scenario_title: 'Checkout Physical-Digital Mismatch',
     severity: 'HIGH',
@@ -335,7 +335,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/4251604-hd_1080_1920_30fps.mp4',
     file_name: '4251604-hd_1080_1920_30fps.mp4',
     camera_id: 'CAM-04B',
-    camera_label: 'CAM-04B · Frozen Foods Section',
+    camera_label: 'CAM-04B Â· Frozen Foods Section',
     scenario_type: 'multiple_items_cart',
     scenario_title: 'Multiple Products In Cart (Normal Flow)',
     severity: 'LOW',
@@ -359,7 +359,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/15717536_2160_3840_60fps.mp4',
     file_name: '15717536_2160_3840_60fps.mp4',
     camera_id: 'CAM-CHECKOUT-CV-01',
-    camera_label: 'CAM-CHECKOUT-CV-01 · Main Queue Lane',
+    camera_label: 'CAM-CHECKOUT-CV-01 Â· Main Queue Lane',
     scenario_type: 'normal_checkout_queue',
     scenario_title: 'Normal Checkout Queue',
     severity: 'LOW',
@@ -383,7 +383,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/4121750-uhd_3840_2160_25fps.mp4',
     file_name: '4121750-uhd_3840_2160_25fps.mp4',
     camera_id: 'CAM-CHECKOUT-CV-01',
-    camera_label: 'CAM-CHECKOUT-CV-01 · POS Payment Terminal',
+    camera_label: 'CAM-CHECKOUT-CV-01 Â· POS Payment Terminal',
     scenario_type: 'pos_payment',
     scenario_title: 'Checkout POS Payment Verification',
     severity: 'LOW',
@@ -407,7 +407,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/9010438-uhd_3840_2160_30fps.mp4',
     file_name: '9010438-uhd_3840_2160_30fps.mp4',
     camera_id: 'CAM-04B',
-    camera_label: 'CAM-04B · Bulk Storage Pallet Racks',
+    camera_label: 'CAM-04B Â· Bulk Storage Pallet Racks',
     scenario_type: 'pallet_storage',
     scenario_title: 'Warehouse Inventory Racks',
     severity: 'LOW',
@@ -431,7 +431,7 @@ export const CCTV_MANIFEST: CCTVVideoEntry[] = [
     file_path: '/cctv/7457422-hd_1920_1080_30fps.mp4',
     file_name: '7457422-hd_1920_1080_30fps.mp4',
     camera_id: 'CAM-CHECKOUT-CV-01',
-    camera_label: 'CAM-CHECKOUT-CV-01 · Self-Checkout Kiosk 2',
+    camera_label: 'CAM-CHECKOUT-CV-01 Â· Self-Checkout Kiosk 2',
     scenario_type: 'self_checkout_scan',
     scenario_title: 'Self-Checkout Scanning Verification',
     severity: 'LOW',
@@ -606,7 +606,7 @@ export class CCTVManifestService {
       });
 
       // Retain operational memory in Store Hindsight
-      await hindsightService.retainStoreExperience({
+      await memoryService.retainStoreExperience({
         situation: `${videoEntry.scenario_title} observed on ${videoEntry.camera_id}`,
         actionTaken: videoEntry.recommended_action,
         measuredOutcome: videoEntry.store_impact || 'Operational safety protocol engaged',
@@ -656,3 +656,5 @@ export class CCTVManifestService {
 }
 
 export const cctvManifestService = new CCTVManifestService();
+
+

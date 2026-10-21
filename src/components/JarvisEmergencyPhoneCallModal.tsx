@@ -184,7 +184,7 @@ export const JarvisEmergencyPhoneCallModal: React.FC = () => {
           const rawCandidate = (final || interim).trim();
           if (!rawCandidate) return;
 
-          // If JARVIS is currently speaking, filter out self-echo of greeting
+          // If Alexa+ is currently speaking, filter out self-echo of greeting
           if (isJarvisSpeakingRef.current && rawCandidate.toLowerCase().includes('hey manager')) {
             return;
           }
@@ -304,7 +304,7 @@ export const JarvisEmergencyPhoneCallModal: React.FC = () => {
 
   const handleManualAction = async (action: 'WHATS_UP' | 'UPDATES' | 'DISPATCH' | 'BYE') => {
     if (action === 'WHATS_UP') {
-      setLastUserSpeech("What's up JARVIS?");
+      setLastUserSpeech("What's up Alexa+?");
       await jarvisEmergencyCallService.managerAskWhatsUp();
     } else if (action === 'UPDATES') {
       setLastUserSpeech('What are the store updates?');
@@ -428,7 +428,7 @@ export const JarvisEmergencyPhoneCallModal: React.FC = () => {
             <div className="p-3.5 bg-slate-900/95 rounded-2xl border border-slate-800 space-y-2.5 shadow-inner">
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5 text-cyan-400 font-semibold">
-                  <Volume2 className="w-3.5 h-3.5" /> JARVIS Audio Channel
+                  <Volume2 className="w-3.5 h-3.5" /> GrocerAI Audio Channel
                 </span>
                 <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
@@ -436,29 +436,29 @@ export const JarvisEmergencyPhoneCallModal: React.FC = () => {
                 </span>
               </div>
 
-              {/* JARVIS Spoken Message */}
+              {/* Assistant spoken message */}
               <div className="p-3 bg-slate-950/90 rounded-xl border border-cyan-500/20 text-xs leading-relaxed text-cyan-100 min-h-[58px] flex items-center">
                 {context.dialogueStep === 1 && (
                   <p>
-                    <span className="font-bold text-cyan-400">JARVIS: </span>
+                    <span className="font-bold text-cyan-400">GROCERAI: </span>
                     "Hey Manager."
                   </p>
                 )}
                 {context.dialogueStep === 2 && (
                   <p>
-                    <span className="font-bold text-cyan-400">JARVIS: </span>
+                    <span className="font-bold text-cyan-400">GROCERAI: </span>
                     "Security Agent detected a critical incident: product concealment at Camera 4 in Aisle 2. You are marked away in traffic, so I reached you on your direct line. We need your immediate decision on this."
                   </p>
                 )}
                 {context.dialogueStep === 3 && (
                   <p>
-                    <span className="font-bold text-cyan-400">JARVIS: </span>
+                    <span className="font-bold text-cyan-400">GROCERAI: </span>
                     "Store operations are stable: 842 shoppers today, sales at ₹1,24,560 across 415 orders. Associate Rahul Sen is actively on floor duty near Aisle 2."
                   </p>
                 )}
                 {context.dialogueStep === 4 && (
                   <p>
-                    <span className="font-bold text-cyan-400">JARVIS: </span>
+                    <span className="font-bold text-cyan-400">GROCERAI: </span>
                     "Understood Manager. Alerting active floor associate Rahul Sen now. Disconnecting call."
                   </p>
                 )}
@@ -471,7 +471,7 @@ export const JarvisEmergencyPhoneCallModal: React.FC = () => {
                     <User className="w-3 h-3" /> Manager Line (You):
                   </span>
                   {context.isJarvisSpeaking ? (
-                    <span className="text-[10px] text-cyan-400 animate-pulse">🔊 JARVIS Speaking...</span>
+                    <span className="text-[10px] text-cyan-400 animate-pulse">🔊 Assistant speaking...</span>
                   ) : isListening ? (
                     <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
@@ -489,7 +489,7 @@ export const JarvisEmergencyPhoneCallModal: React.FC = () => {
                     <span className="text-slate-300">"{lastUserSpeech}"</span>
                   ) : (
                     <span className="text-slate-500 text-[10px]">
-                      Speak naturally into phone (or say "Hey JARVIS")...
+                      Speak naturally into phone (or say "Hey Alexa")...
                     </span>
                   )}
                 </div>
@@ -582,7 +582,7 @@ export const JarvisEmergencyPhoneCallModal: React.FC = () => {
                   className="w-full p-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer hover:scale-[1.01]"
                 >
                   <Mic className="w-3.5 h-3.5 text-cyan-200" />
-                  <span>Say: "What's up JARVIS?" (or "What happened?")</span>
+                  <span>Say: "What's up?" (or "What happened?")</span>
                 </button>
               )}
 
@@ -675,7 +675,7 @@ export const JarvisEmergencyPhoneCallModal: React.FC = () => {
                 <CheckCircle2 className="w-4 h-4" /> Floor Verification Succeeded
               </div>
               <p className="text-xs text-slate-200 leading-relaxed">
-                <span className="font-bold text-cyan-400">JARVIS: </span>
+                <span className="font-bold text-cyan-400">GROCERAI: </span>
                 "Hey Manager, associate Rahul Sen has handled the situation in Aisle 2. Shelf verified and all secure. Have a safe drive, bye!"
               </p>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Sidebar } from '../components/Sidebar';
-import { HindsightMemoryPanel } from '../components/HindsightMemoryPanel';
+import { NativeMemoryPanel } from '../components/NativeMemoryPanel';
 import { db } from '../services/db';
 import { storeAgent } from '../services/storeAgent';
 import { roiEngine } from '../services/roiEngine';
@@ -129,7 +129,7 @@ export const AIRecommendationsPage: React.FC = () => {
         )}
 
         {/* Hindsight Experiential Memory & Learning System */}
-        <HindsightMemoryPanel />
+        <NativeMemoryPanel />
 
         {/* Store Agent Dynamic Convergence Stepper (30 -> 38 -> 44 -> 42 Units) */}
         <div className="bg-slate-900 border border-indigo-500/30 rounded-3xl p-6 shadow-2xl space-y-4">
@@ -164,7 +164,7 @@ export const AIRecommendationsPage: React.FC = () => {
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
               >
                 <Zap className="w-3.5 h-3.5" />
-                <span>Advance Convergence ({convergenceStep < 4 ? `Step ${convergenceStep} → ${convergenceStep + 1}` : 'Equilibrium Reached'})</span>
+                <span>Advance Convergence ({convergenceStep < 4 ? `Step ${convergenceStep} â†’ ${convergenceStep + 1}` : 'Equilibrium Reached'})</span>
               </button>
             </div>
           </div>
@@ -176,7 +176,7 @@ export const AIRecommendationsPage: React.FC = () => {
                 stepNum: 1,
                 label: 'Week 1: Baseline',
                 qty: '30 units',
-                outcome: 'Depleted in 42m (18 unmet requests, ~₹1,450 lost sales)',
+                outcome: 'Depleted in 42m (18 unmet requests, ~â‚¹1,450 lost sales)',
                 tag: 'Baseline Shortage',
                 status: convergenceStep === 1 ? 'current' : convergenceStep > 1 ? 'completed' : 'upcoming'
               },
@@ -184,7 +184,7 @@ export const AIRecommendationsPage: React.FC = () => {
                 stepNum: 2,
                 label: 'Week 2: +26% Delta',
                 qty: '38 units',
-                outcome: 'Shortage delta +8 applied. 4 unmet requests at 7:15 PM (~₹320 lost)',
+                outcome: 'Shortage delta +8 applied. 4 unmet requests at 7:15 PM (~â‚¹320 lost)',
                 tag: '+8 Units Delta',
                 status: convergenceStep === 2 ? 'current' : convergenceStep > 2 ? 'completed' : 'upcoming'
               },
@@ -361,7 +361,7 @@ export const AIRecommendationsPage: React.FC = () => {
                           Closed-Loop Financial ROI Engine:
                         </span>
                         <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30">
-                          Expected ≠ Realized Verified
+                          Expected â‰  Realized Verified
                         </span>
                       </div>
 
@@ -384,7 +384,7 @@ export const AIRecommendationsPage: React.FC = () => {
                       </div>
 
                       <p className="text-[11px] text-slate-400 italic">
-                        💡 {roi.discrepancyNote}
+                        ðŸ’¡ {roi.discrepancyNote}
                       </p>
                     </div>
                   );
@@ -524,3 +524,4 @@ export const AIRecommendationsPage: React.FC = () => {
     </div>
   );
 };
+

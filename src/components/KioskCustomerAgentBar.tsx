@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   Mic,
@@ -24,7 +24,7 @@ import { customerAgent, CustomerAgentResponse, getCustomerAgentIdentity } from '
 import { voiceService } from '../services/voiceService';
 import { echoGuard } from '../services/echoGuard';
 import { db } from '../services/db';
-import { hindsightService } from '../services/hindsightService';
+import { memoryService } from '../services/nativeMemoryService';
 import { Product } from '../types';
 
 export const KioskCustomerAgentBar: React.FC = () => {
@@ -58,7 +58,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
     let active = true;
     setRecalledMemories([]);
     if (currentCustomer) {
-      hindsightService.recallCustomerMemories(customerId, 'dietary brand budget organic preferences')
+      memoryService.recallCustomerMemories(customerId, 'dietary brand budget organic preferences')
         .then(res => { if (active) setRecalledMemories(res.success ? res.results.map(item => item.text) : []); })
         .catch(() => { if (active) setRecalledMemories([]); });
     }
@@ -81,7 +81,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
     return unsub;
   }, []);
 
-  // Continuous background wake-word listener (Say "Hey JARVIS")
+  // Continuous background wake-word listener (Say "Hey Alexa")
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -106,12 +106,8 @@ export const KioskCustomerAgentBar: React.FC = () => {
 
         const lower = transcript.toLowerCase();
         const hasWakeWord =
-          lower.includes('hey jarvis') ||
-          lower.includes('jarvis') ||
-          lower.includes('హే జార్విస్') ||
-          lower.includes('జార్విస్') ||
-          lower.includes('हे जार्विस') ||
-          lower.includes('जार्विस');
+          lower.includes('hey alexa') ||
+          lower.includes('alexa');
 
         const isEnding =
           lower === 'end' ||
@@ -123,13 +119,13 @@ export const KioskCustomerAgentBar: React.FC = () => {
           lower.includes('stop conversation') ||
           lower.includes('goodbye') ||
           lower.includes("that's all") ||
-          lower.includes('bye jarvis') ||
-          lower.includes('చాలు') ||
-          lower.includes('ఆపు') ||
-          lower.includes('ముగించు') ||
-          lower.includes('बस') ||
-          lower.includes('अलविदा') ||
-          lower.includes('बंद करो');
+          lower.includes('bye alexa') ||
+          lower.includes('à°šà°¾à°²à±') ||
+          lower.includes('à°†à°ªà±') ||
+          lower.includes('à°®à±à°—à°¿à°‚à°šà±') ||
+          lower.includes('à¤¬à¤¸') ||
+          lower.includes('à¤…à¤²à¤µà¤¿à¤¦à¤¾') ||
+          lower.includes('à¤¬à¤‚à¤¦ à¤•à¤°à¥‹');
 
         if (latest.isFinal) {
           if (isEnding && isContinuousActiveRef.current) {
@@ -137,10 +133,10 @@ export const KioskCustomerAgentBar: React.FC = () => {
             voiceService.playAudioChime(480, 200);
             const farewell =
               language === 'te'
-                ? 'ధన్యవాదాలు! సంభాషణ ముగిసింది.'
+                ? 'à°§à°¨à±à°¯à°µà°¾à°¦à°¾à°²à±! à°¸à°‚à°­à°¾à°·à°£ à°®à±à°—à°¿à°¸à°¿à°‚à°¦à°¿.'
                 : language === 'hi'
-                ? 'धन्यवाद! बातचीत समाप्त हुई।'
-                : "Goodbye! Have a great time shopping. Say 'Hey JARVIS' whenever you need me.";
+                ? 'à¤§à¤¨à¥à¤¯à¤µà¤¾à¤¦! à¤¬à¤¾à¤¤à¤šà¥€à¤¤ à¤¸à¤®à¤¾à¤ªà¥à¤¤ à¤¹à¥à¤ˆà¥¤'
+                : "Goodbye! Have a great time shopping. Say 'Hey Alexa' whenever you need me.";
             setActiveResponse({ message: farewell });
             if (voiceAudioEnabled) {
               voiceService.speak(farewell, language, sessionId);
@@ -151,12 +147,8 @@ export const KioskCustomerAgentBar: React.FC = () => {
           if (hasWakeWord || isContinuousActiveRef.current) {
             isContinuousActiveRef.current = true;
             const cleanCommand = transcript
-              .replace(/hey\s+jarvis[,.]?/i, '')
-              .replace(/jarvis[,.]?/i, '')
-              .replace(/హే\s+జార్విస్[,.]?/i, '')
-              .replace(/జార్విస్[,.]?/i, '')
-              .replace(/हे\s+जार्विस[,.]?/i, '')
-              .replace(/जार्विस[,.]?/i, '')
+              .replace(/hey\s+alexa[,.]?/i, '')
+              .replace(/alexa[,.]?/i, '')
               .trim();
 
             if (cleanCommand) {
@@ -234,9 +226,9 @@ export const KioskCustomerAgentBar: React.FC = () => {
       console.error('Customer agent query failed:', err);
       setActiveResponse({
         message: language === 'te'
-          ? "క్షమించండి, ప్రాసెస్ చేయడంలో లోపం వచ్చింది. దయచేసి మళ్లీ అడగండి."
+          ? "à°•à±à°·à°®à°¿à°‚à°šà°‚à°¡à°¿, à°ªà±à°°à°¾à°¸à±†à°¸à± à°šà±‡à°¯à°¡à°‚à°²à±‹ à°²à±‹à°ªà°‚ à°µà°šà±à°šà°¿à°‚à°¦à°¿. à°¦à°¯à°šà±‡à°¸à°¿ à°®à°³à±à°²à±€ à°…à°¡à°—à°‚à°¡à°¿."
           : language === 'hi'
-          ? "क्षमा करें, अनुरोध संसाधित करने में समस्या आई। कृपया पुनः पूछें।"
+          ? "à¤•à¥à¤·à¤®à¤¾ à¤•à¤°à¥‡à¤‚, à¤…à¤¨à¥à¤°à¥‹à¤§ à¤¸à¤‚à¤¸à¤¾à¤§à¤¿à¤¤ à¤•à¤°à¤¨à¥‡ à¤®à¥‡à¤‚ à¤¸à¤®à¤¸à¥à¤¯à¤¾ à¤†à¤ˆà¥¤ à¤•à¥ƒà¤ªà¤¯à¤¾ à¤ªà¥à¤¨à¤ƒ à¤ªà¥‚à¤›à¥‡à¤‚à¥¤"
           : "I encountered an issue processing that. Please ask again or specify which brand you'd like!",
         error: "Network error"
       });
@@ -277,20 +269,20 @@ export const KioskCustomerAgentBar: React.FC = () => {
   };
 
   const suggestionChips = language === 'te' ? [
-    { label: "🍳 3 మందికి ₹300 లోపు అల్పాహారం", query: "నేను 300 లోపు 3 మందికి బ్రేక్‌ఫాస్ట్ చేయాలనుకుంటున్నాను, స్టోర్‌లో ఉన్న వాటితో ఏమి చేయవచ్చు?" },
-    { label: "💡 ఈరోజు ఏమి వండాలి?", query: "ఈరోజు ఏమి వండాలో అర్థం కావడం లేదు, స్టోర్ వస్తువులతో ఒక సులభమైన ఆరోగ్యకరమైన వంటకాన్ని సూచించగలరా?" },
-    { label: "🍞 ఆర్గానిక్ బ్రెడ్ & పెరుగు", query: "నాకు ఆర్గానిక్ బ్రెడ్ మరియు పెరుగు కావాలి. పెరుగు స్టాక్ లేకపోతే ప్రత్యామ్నాయాన్ని సూచించండి." },
-    { label: "🥦 బ్రకోలీ ఆరోగ్య ప్రయోజనాలు", query: "బరువు తగ్గడానికి బ్రకోలీ మంచిదా? ఆరోగ్యకరమైన అలవాట్లను సూచించండి." }
+    { label: "ðŸ³ 3 à°®à°‚à°¦à°¿à°•à°¿ â‚¹300 à°²à±‹à°ªà± à°…à°²à±à°ªà°¾à°¹à°¾à°°à°‚", query: "à°¨à±‡à°¨à± 300 à°²à±‹à°ªà± 3 à°®à°‚à°¦à°¿à°•à°¿ à°¬à±à°°à±‡à°•à±â€Œà°«à°¾à°¸à±à°Ÿà± à°šà±‡à°¯à°¾à°²à°¨à±à°•à±à°‚à°Ÿà±à°¨à±à°¨à°¾à°¨à±, à°¸à±à°Ÿà±‹à°°à±â€Œà°²à±‹ à°‰à°¨à±à°¨ à°µà°¾à°Ÿà°¿à°¤à±‹ à°à°®à°¿ à°šà±‡à°¯à°µà°šà±à°šà±?" },
+    { label: "ðŸ’¡ à°ˆà°°à±‹à°œà± à°à°®à°¿ à°µà°‚à°¡à°¾à°²à°¿?", query: "à°ˆà°°à±‹à°œà± à°à°®à°¿ à°µà°‚à°¡à°¾à°²à±‹ à°…à°°à±à°¥à°‚ à°•à°¾à°µà°¡à°‚ à°²à±‡à°¦à±, à°¸à±à°Ÿà±‹à°°à± à°µà°¸à±à°¤à±à°µà±à°²à°¤à±‹ à°’à°• à°¸à±à°²à°­à°®à±ˆà°¨ à°†à°°à±‹à°—à±à°¯à°•à°°à°®à±ˆà°¨ à°µà°‚à°Ÿà°•à°¾à°¨à±à°¨à°¿ à°¸à±‚à°šà°¿à°‚à°šà°—à°²à°°à°¾?" },
+    { label: "ðŸž à°†à°°à±à°—à°¾à°¨à°¿à°•à± à°¬à±à°°à±†à°¡à± & à°ªà±†à°°à±à°—à±", query: "à°¨à°¾à°•à± à°†à°°à±à°—à°¾à°¨à°¿à°•à± à°¬à±à°°à±†à°¡à± à°®à°°à°¿à°¯à± à°ªà±†à°°à±à°—à± à°•à°¾à°µà°¾à°²à°¿. à°ªà±†à°°à±à°—à± à°¸à±à°Ÿà°¾à°•à± à°²à±‡à°•à°ªà±‹à°¤à±‡ à°ªà±à°°à°¤à±à°¯à°¾à°®à±à°¨à°¾à°¯à°¾à°¨à±à°¨à°¿ à°¸à±‚à°šà°¿à°‚à°šà°‚à°¡à°¿." },
+    { label: "ðŸ¥¦ à°¬à±à°°à°•à±‹à°²à±€ à°†à°°à±‹à°—à±à°¯ à°ªà±à°°à°¯à±‹à°œà°¨à°¾à°²à±", query: "à°¬à°°à±à°µà± à°¤à°—à±à°—à°¡à°¾à°¨à°¿à°•à°¿ à°¬à±à°°à°•à±‹à°²à±€ à°®à°‚à°šà°¿à°¦à°¾? à°†à°°à±‹à°—à±à°¯à°•à°°à°®à±ˆà°¨ à°…à°²à°µà°¾à°Ÿà±à°²à°¨à± à°¸à±‚à°šà°¿à°‚à°šà°‚à°¡à°¿." }
   ] : language === 'hi' ? [
-    { label: "🍳 3 लोगों के लिए ₹300 में नाश्ता", query: "मैं 300 रुपये के अंदर 3 लोगों के लिए नाश्ता बनाना चाहता हूँ, स्टोर में क्या उपलब्ध है?" },
-    { label: "💡 आज क्या पकाएं?", query: "मुझे समझ नहीं आ रहा आज क्या पकाऊं, क्या आप कोई आसान स्वस्थ रेसिपी सुझा सकते हैं?" },
-    { label: "🍞 ऑर्गेनिक ब्रेड और दही", query: "मुझे ऑर्गेनिक ब्रेड और दही चाहिए। अगर दही स्टॉक में नहीं है तो विकल्प बताएं।" },
-    { label: "🥦 वजन घटाने के लिए ब्रोकली", query: "क्या ब्रोकली वजन घटाने के लिए अच्छी है? स्वस्थ खान-पान की आदतें बताएं।" }
+    { label: "ðŸ³ 3 à¤²à¥‹à¤—à¥‹à¤‚ à¤•à¥‡ à¤²à¤¿à¤ â‚¹300 à¤®à¥‡à¤‚ à¤¨à¤¾à¤¶à¥à¤¤à¤¾", query: "à¤®à¥ˆà¤‚ 300 à¤°à¥à¤ªà¤¯à¥‡ à¤•à¥‡ à¤…à¤‚à¤¦à¤° 3 à¤²à¥‹à¤—à¥‹à¤‚ à¤•à¥‡ à¤²à¤¿à¤ à¤¨à¤¾à¤¶à¥à¤¤à¤¾ à¤¬à¤¨à¤¾à¤¨à¤¾ à¤šà¤¾à¤¹à¤¤à¤¾ à¤¹à¥‚à¤, à¤¸à¥à¤Ÿà¥‹à¤° à¤®à¥‡à¤‚ à¤•à¥à¤¯à¤¾ à¤‰à¤ªà¤²à¤¬à¥à¤§ à¤¹à¥ˆ?" },
+    { label: "ðŸ’¡ à¤†à¤œ à¤•à¥à¤¯à¤¾ à¤ªà¤•à¤¾à¤à¤‚?", query: "à¤®à¥à¤à¥‡ à¤¸à¤®à¤ à¤¨à¤¹à¥€à¤‚ à¤† à¤°à¤¹à¤¾ à¤†à¤œ à¤•à¥à¤¯à¤¾ à¤ªà¤•à¤¾à¤Šà¤‚, à¤•à¥à¤¯à¤¾ à¤†à¤ª à¤•à¥‹à¤ˆ à¤†à¤¸à¤¾à¤¨ à¤¸à¥à¤µà¤¸à¥à¤¥ à¤°à¥‡à¤¸à¤¿à¤ªà¥€ à¤¸à¥à¤à¤¾ à¤¸à¤•à¤¤à¥‡ à¤¹à¥ˆà¤‚?" },
+    { label: "ðŸž à¤‘à¤°à¥à¤—à¥‡à¤¨à¤¿à¤• à¤¬à¥à¤°à¥‡à¤¡ à¤”à¤° à¤¦à¤¹à¥€", query: "à¤®à¥à¤à¥‡ à¤‘à¤°à¥à¤—à¥‡à¤¨à¤¿à¤• à¤¬à¥à¤°à¥‡à¤¡ à¤”à¤° à¤¦à¤¹à¥€ à¤šà¤¾à¤¹à¤¿à¤à¥¤ à¤…à¤—à¤° à¤¦à¤¹à¥€ à¤¸à¥à¤Ÿà¥‰à¤• à¤®à¥‡à¤‚ à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆ à¤¤à¥‹ à¤µà¤¿à¤•à¤²à¥à¤ª à¤¬à¤¤à¤¾à¤à¤‚à¥¤" },
+    { label: "ðŸ¥¦ à¤µà¤œà¤¨ à¤˜à¤Ÿà¤¾à¤¨à¥‡ à¤•à¥‡ à¤²à¤¿à¤ à¤¬à¥à¤°à¥‹à¤•à¤²à¥€", query: "à¤•à¥à¤¯à¤¾ à¤¬à¥à¤°à¥‹à¤•à¤²à¥€ à¤µà¤œà¤¨ à¤˜à¤Ÿà¤¾à¤¨à¥‡ à¤•à¥‡ à¤²à¤¿à¤ à¤…à¤šà¥à¤›à¥€ à¤¹à¥ˆ? à¤¸à¥à¤µà¤¸à¥à¤¥ à¤–à¤¾à¤¨-à¤ªà¤¾à¤¨ à¤•à¥€ à¤†à¤¦à¤¤à¥‡à¤‚ à¤¬à¤¤à¤¾à¤à¤‚à¥¤" }
   ] : [
-    { label: "🍳 Breakfast for 3 under ₹300", query: "I want to prepare breakfast for 3 people below 300, what can I cook with products in store?" },
-    { label: "💡 What should I cook today?", query: "I don't know what to cook, can you help recommend a simple healthy recipe with store ingredients?" },
-    { label: "🍞 Organic bread & yogurt", query: "I prefer organic whole wheat bread and yogurt. If yogurt is out of stock, recommend the best alternatives." },
-    { label: "🥦 Broccoli for weight loss", query: "Is broccoli good for losing weight? Can you suggest healthy eating habits and high-fiber foods in store?" },
+    { label: "ðŸ³ Breakfast for 3 under â‚¹300", query: "I want to prepare breakfast for 3 people below 300, what can I cook with products in store?" },
+    { label: "ðŸ’¡ What should I cook today?", query: "I don't know what to cook, can you help recommend a simple healthy recipe with store ingredients?" },
+    { label: "ðŸž Organic bread & yogurt", query: "I prefer organic whole wheat bread and yogurt. If yogurt is out of stock, recommend the best alternatives." },
+    { label: "ðŸ¥¦ Broccoli for weight loss", query: "Is broccoli good for losing weight? Can you suggest healthy eating habits and high-fiber foods in store?" },
   ];
 
   return (
@@ -301,7 +293,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
       {/* Top Header Row */}
       <div className="flex flex-wrap items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-3">
-          {/* Animated JARVIS Orb */}
+          {/* Animated Alexa+ Orb */}
           <div className="relative flex items-center justify-center">
             <div className={`w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 ${isSpeaking || isLoading ? 'animate-pulse scale-105' : ''}`}>
               <Brain className="w-5 h-5 text-slate-950" />
@@ -317,7 +309,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-1.5">
-                GrocerAI Customer Agent <span className="text-emerald-400 text-xs font-mono font-normal">(JARVIS)</span>
+                GrocerAI Customer Agent <span className="text-emerald-400 text-xs font-mono font-normal">(Alexa+)</span>
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-400">
                 In-Store Intelligence
@@ -325,10 +317,10 @@ export const KioskCustomerAgentBar: React.FC = () => {
             </div>
             <p className="text-[11px] text-slate-400">
               {language === 'te'
-                ? 'వంటకాల ఆలోచనలు, బడ్జెట్ భోజనాలు (<₹300), స్టాక్ ప్రత్యామ్నాయాలు లేదా పోషకాహార సలహాలను అడగండి'
+                ? 'à°µà°‚à°Ÿà°•à°¾à°² à°†à°²à±‹à°šà°¨à°²à±, à°¬à°¡à±à°œà±†à°Ÿà± à°­à±‹à°œà°¨à°¾à°²à± (<â‚¹300), à°¸à±à°Ÿà°¾à°•à± à°ªà±à°°à°¤à±à°¯à°¾à°®à±à°¨à°¾à°¯à°¾à°²à± à°²à±‡à°¦à°¾ à°ªà±‹à°·à°•à°¾à°¹à°¾à°° à°¸à°²à°¹à°¾à°²à°¨à± à°…à°¡à°—à°‚à°¡à°¿'
                 : language === 'hi'
-                ? 'रेसिपी विचार, बजट भोजन (<₹300), स्टॉक विकल्प या पोषण संबंधी सलाह पूछें'
-                : 'Ask recipe ideas, budget meals (<₹300), stock alternatives, or dietary advice'}
+                ? 'à¤°à¥‡à¤¸à¤¿à¤ªà¥€ à¤µà¤¿à¤šà¤¾à¤°, à¤¬à¤œà¤Ÿ à¤­à¥‹à¤œà¤¨ (<â‚¹300), à¤¸à¥à¤Ÿà¥‰à¤• à¤µà¤¿à¤•à¤²à¥à¤ª à¤¯à¤¾ à¤ªà¥‹à¤·à¤£ à¤¸à¤‚à¤¬à¤‚à¤§à¥€ à¤¸à¤²à¤¾à¤¹ à¤ªà¥‚à¤›à¥‡à¤‚'
+                : 'Ask recipe ideas, budget meals (<â‚¹300), stock alternatives, or dietary advice'}
             </p>
           </div>
         </div>
@@ -355,7 +347,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
           <button
             onClick={() => setIsSessionQRModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
-            title="Scan Session QR to continue with JARVIS in aisles"
+            title="Scan Session QR to continue with Alexa+ in aisles"
           >
             <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
             <span className="hidden sm:inline">Switch to Mobile (QR)</span>
@@ -377,7 +369,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-bold text-emerald-300">
-              ⭐ Hindsight Memory Active for {currentCustomer?.name || 'Shopper'}:
+              â­ Hindsight Memory Active for {currentCustomer?.name || 'Shopper'}:
             </span>
             <span className="text-slate-300 text-[11px]">
               {recalledMemories[0].slice(0, 100)}...
@@ -397,7 +389,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask anything: What to cook? Breakfast for 3 under ₹300, organic alternatives..."
+              placeholder="Ask anything: What to cook? Breakfast for 3 under â‚¹300, organic alternatives..."
               className="flex-1 bg-transparent text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none"
               disabled={isLoading}
             />
@@ -422,7 +414,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
               className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
             >
               {isLoading ? (
-                <span className="animate-spin text-xs">⏳</span>
+                <span className="animate-spin text-xs">â³</span>
               ) : (
                 <>
                   <Send className="w-3.5 h-3.5" />
@@ -482,8 +474,8 @@ export const KioskCustomerAgentBar: React.FC = () => {
                     <div>
                       <h4 className="text-xs font-bold text-white">{activeResponse.productFound.name}</h4>
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                        <span className="font-mono text-emerald-400 font-bold">₹{activeResponse.productFound.price}</span>
-                        <span>•</span>
+                        <span className="font-mono text-emerald-400 font-bold">â‚¹{activeResponse.productFound.price}</span>
+                        <span>â€¢</span>
                         <span className="flex items-center gap-0.5 text-slate-300">
                           <MapPin className="w-3 h-3 text-emerald-400" />
                           {activeResponse.productFound.aisle}
@@ -535,7 +527,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-white truncate">{alt.name}</p>
                             <p className="text-[10px] text-slate-400 font-mono text-emerald-400">
-                              ₹{alt.price} • {alt.aisle}
+                              â‚¹{alt.price} â€¢ {alt.aisle}
                             </p>
                           </div>
                         </div>
@@ -565,7 +557,7 @@ export const KioskCustomerAgentBar: React.FC = () => {
                   className="text-emerald-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
-                  <span>Continue on Mobile Companion (Scan QR) →</span>
+                  <span>Continue on Mobile Companion (Scan QR) â†’</span>
                 </button>
               </div>
             </div>
@@ -575,3 +567,6 @@ export const KioskCustomerAgentBar: React.FC = () => {
     </div>
   );
 };
+
+
+

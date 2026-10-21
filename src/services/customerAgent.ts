@@ -14,6 +14,7 @@ export interface CustomerAgentResponse {
   groqConfigured?: boolean;
   itemsDetected?: string[];
   productFound?: Product;
+  recommendedProducts?: Product[];
   activeProductContext?: { productId?: string; productName?: string; productOptions?: Array<{ productId: string; name: string; brand: string; skuId?: string }> };
   isAvailable?: boolean;
   alternatives?: Product[];
@@ -364,6 +365,7 @@ export class CustomerAgent {
       is_code_mixed: agentResult.is_code_mixed ?? langResult.is_code_mixed,
       groqConfigured: true,
       productFound: agentResult.productFound,
+      recommendedProducts: agentResult.recommendedProducts,
       activeProductContext: agentResult.activeProductContext,
       isAvailable: agentResult.isAvailable,
       alternatives: agentResult.alternatives,

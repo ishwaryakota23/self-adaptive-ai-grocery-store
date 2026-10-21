@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   BarChart,
@@ -54,7 +54,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { Sidebar } from '../components/Sidebar';
 import { StoreAgentChat } from '../components/StoreAgentChat';
-import { HindsightMemoryPanel } from '../components/HindsightMemoryPanel';
+import { NativeMemoryPanel } from '../components/NativeMemoryPanel';
 import { CCTVSurveillanceHub } from '../components/CCTVSurveillanceHub';
 import { EmployeeOperationsPanel } from '../components/EmployeeOperationsPanel';
 import { JarvisManagerCommandCenter } from '../components/JarvisManagerCommandCenter';
@@ -92,7 +92,7 @@ export const StoreDashboardPage: React.FC = () => {
     hindsightDocId: string;
   } | null>(null);
 
-  // Contextual CCTV focus state when navigated from alert or JARVIS voice command
+  // Contextual CCTV focus state when navigated from alert or Alexa+ voice command
   const [cctvFocus, setCctvFocus] = useState<{
     videoId?: string;
     cameraId?: string;
@@ -132,7 +132,7 @@ export const StoreDashboardPage: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // Subscribe to JARVIS navigation events (Section 4 & 11 Requirement)
+  // Subscribe to Alexa+ navigation events (Section 4 & 11 Requirement)
   useEffect(() => {
     const unsub = jarvisManagerService.subscribeNavigation((evt: ManagerNavigationEvent) => {
       if (evt.category === 'dashboard') {
@@ -180,7 +180,7 @@ export const StoreDashboardPage: React.FC = () => {
       setActiveLoopResult({
         scenarioName: 'Synthetic demo: Evening Milk Restock & Stockout Avoidance',
         stages: res.loopStages,
-        netImpact: res.roiReport.metrics.netBusinessImpact?.formattedValue || '₹1,090',
+        netImpact: res.roiReport.metrics.netBusinessImpact?.formattedValue || 'â‚¹1,090',
         hindsightDocId: res.retainedHindsightId
       });
       setBusinessImpact(roiEngine.getStoreBusinessImpactSummary());
@@ -235,7 +235,7 @@ export const StoreDashboardPage: React.FC = () => {
             status: 'INACTIVE'
           }
         ],
-        netImpact: res.roiReport.metrics.netBusinessImpact?.formattedValue || '₹800',
+        netImpact: res.roiReport.metrics.netBusinessImpact?.formattedValue || 'â‚¹800',
         hindsightDocId: res.retainedHindsightId
       });
       setBusinessImpact(roiEngine.getStoreBusinessImpactSummary());
@@ -283,16 +283,16 @@ export const StoreDashboardPage: React.FC = () => {
             id: 'alert-sec-critical',
             type: 'SECURITY' as const,
             severity: 'CRITICAL' as const,
-            badge: '🔴 Critical Security Alert',
+            badge: 'ðŸ”´ Critical Security Alert',
             title: openSecurity[0].details || 'Possible Product Concealment Detected',
-            location: 'Camera 4 (CAM-04B) · Aisle 2',
+            location: 'Camera 4 (CAM-04B) Â· Aisle 2',
             timestamp: openSecurity[0].timestamp ? new Date(openSecurity[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '14:32',
             actionText: 'Review Footage',
             onAction: () => {
               setCctvFocus({
                 videoId: 'cctv_001_shoplifting_jacket',
                 cameraId: 'CAM-04B',
-                note: 'Camera 4 (CAM-04B) · High Severity Concealment at 14:32 (Concealment + exit sequence)'
+                note: 'Camera 4 (CAM-04B) Â· High Severity Concealment at 14:32 (Concealment + exit sequence)'
               });
               handleSelectTab('cctv');
             },
@@ -309,7 +309,7 @@ export const StoreDashboardPage: React.FC = () => {
             id: 'alert-op-queue',
             type: 'OPERATIONAL' as const,
             severity: 'HIGH' as const,
-            badge: '🟠 High Priority Operational Alert',
+            badge: 'ðŸŸ  High Priority Operational Alert',
             title: `${congestedQueues[0].kiosk_name || 'Verification Kiosk 3'} Congested`,
             location: `Wait time ~${congestedQueues[0].estimated_wait_mins} min (Target SLA: 3.0 min)`,
             timestamp: 'Live',
@@ -328,9 +328,9 @@ export const StoreDashboardPage: React.FC = () => {
             id: 'alert-inv-stockout',
             type: 'INVENTORY' as const,
             severity: 'HIGH' as const,
-            badge: '🟠 High Priority Operational Alert',
+            badge: 'ðŸŸ  High Priority Operational Alert',
             title: `Critical Stockout: ${db.getProductById(stockouts[0].product_id)?.name || stockouts[0].product_id} (0 Units)`,
-            location: `Aisle: ${db.getProductById(stockouts[0].product_id)?.aisle || 'Aisle 1'} • Lost sales risk`,
+            location: `Aisle: ${db.getProductById(stockouts[0].product_id)?.aisle || 'Aisle 1'} â€¢ Lost sales risk`,
             timestamp: 'Real-time',
             actionText: 'Inspect Inventory',
             onAction: () => handleSelectTab('inventory'),
@@ -347,11 +347,11 @@ export const StoreDashboardPage: React.FC = () => {
             id: 'alert-rec-pending',
             type: 'RECOMMENDATION' as const,
             severity: 'MEDIUM' as const,
-            badge: '🟡 Attention Required',
+            badge: 'ðŸŸ¡ Attention Required',
             title: `Store Agent Recommendation: ${pendingRecs[0].title}`,
             location: `${pendingRecs[0].suggested_action} (${pendingRecs[0].suggested_quantity || 42} units)`,
             timestamp: 'Pending Review',
-            actionText: 'Approve via JARVIS',
+            actionText: 'Approve via Alexa+',
             onAction: () => jarvisManagerService.processManagerInput('Approve restock'),
             secondaryActionText: 'View Recommendations',
             onSecondaryAction: () => navigate('/store/recommendations')
@@ -364,9 +364,9 @@ export const StoreDashboardPage: React.FC = () => {
       id: `alert-staff-att-${att.id}`,
       type: 'OPERATIONAL' as const,
       severity: 'LOW' as const,
-      badge: '🟢 Staff Check-In Verified',
+      badge: 'ðŸŸ¢ Staff Check-In Verified',
       title: `${att.employee_name} (${att.employee_id} - ${att.role}) checked in`,
-      location: `Station: ${att.location} • Time: ${att.time_display}`,
+      location: `Station: ${att.location} â€¢ Time: ${att.time_display}`,
       timestamp: 'Today',
       actionText: 'View Staff Roster',
       onAction: () => handleSelectTab('employees'),
@@ -386,7 +386,7 @@ export const StoreDashboardPage: React.FC = () => {
     { id: 'security', label: 'Security', icon: ShieldAlert, badge: openSecurity.length > 0 ? `${openSecurity.length} alert` : undefined, badgeColor: 'bg-rose-500' },
     { id: 'cctv', label: 'CCTV Surveillance', icon: Camera, badge: '5 Cams', badgeColor: 'bg-cyan-600' },
     { id: 'hindsight', label: 'Hindsight', icon: BrainCircuit, badge: 'Active', badgeColor: 'bg-emerald-600' },
-    { id: 'roi', label: 'ROI & Impact', icon: Calculator, badge: '₹1.09k Net', badgeColor: 'bg-emerald-600' },
+    { id: 'roi', label: 'ROI & Impact', icon: Calculator, badge: 'â‚¹1.09k Net', badgeColor: 'bg-emerald-600' },
     { id: 'employees', label: 'Employees', icon: Users }
   ];
 
@@ -408,8 +408,8 @@ export const StoreDashboardPage: React.FC = () => {
               <span className="text-[11px] font-mono font-bold tracking-wider uppercase text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
                 HQ COMMAND TERMINAL
               </span>
-              <span className="text-slate-500 text-xs">•</span>
-              <span className="text-xs text-slate-400 font-mono">Branch #104 · Indiranagar Flagship</span>
+              <span className="text-slate-500 text-xs">â€¢</span>
+              <span className="text-xs text-slate-400 font-mono">Branch #104 Â· Indiranagar Flagship</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white mt-1 tracking-tight flex items-center gap-2">
               HELLO, MANAGER
@@ -418,7 +418,7 @@ export const StoreDashboardPage: React.FC = () => {
               </span>
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Direct Mobile: +91 {managerService.getManagerPhone()} • Executive supervisory interface • Multi-agent analytics
+              Direct Mobile: +91 {managerService.getManagerPhone()} â€¢ Executive supervisory interface â€¢ Multi-agent analytics
             </p>
           </div>
 
@@ -438,7 +438,7 @@ export const StoreDashboardPage: React.FC = () => {
               title="Toggle Manager Presence: At Desk vs In Traffic"
             >
               {managerPresence === 'IN_TRAFFIC' ? <Car className="w-3.5 h-3.5" /> : <Building className="w-3.5 h-3.5" />}
-              <span>{managerPresence === 'IN_TRAFFIC' ? 'Presence: In Traffic 🚗' : 'Presence: At Desk 🏢'}</span>
+              <span>{managerPresence === 'IN_TRAFFIC' ? 'Presence: In Traffic ðŸš—' : 'Presence: At Desk ðŸ¢'}</span>
             </button>
 
             {/* Direct Link to Mobile Companion */}
@@ -489,7 +489,7 @@ export const StoreDashboardPage: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-300 mt-0.5">
-                  When manager is away or in traffic, JARVIS automatically rings mobile direct line without waiting 5 minutes.
+                  When manager is away or in traffic, Alexa+ automatically rings mobile direct line without waiting 5 minutes.
                 </p>
               </div>
             </div>
@@ -500,7 +500,7 @@ export const StoreDashboardPage: React.FC = () => {
                 jarvisEmergencyCallService.initiateEmergencyCall({
                   incidentId: 'cctv_001_shoplifting_jacket',
                   incidentTitle: 'Product Concealment (Jacket / Clothing)',
-                  cameraLabel: 'CAM-04B · Aisle 2 (Pantry & Snacks)',
+                  cameraLabel: 'CAM-04B Â· Aisle 2 (Pantry & Snacks)',
                   aisle: 'Aisle 2',
                   severity: 'CRITICAL',
                   assignedEmployeeName: 'Rahul Sen'
@@ -549,7 +549,7 @@ export const StoreDashboardPage: React.FC = () => {
         {/* =================================================================== */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-            {/* 1. JARVIS IS THE MAIN COMMAND INTERFACE (Requirement 2) */}
+            {/* 1. ALEXA+ IS THE MAIN COMMAND INTERFACE (Requirement 2) */}
             <JarvisManagerCommandCenter />
 
             {/* 2. IMPORTANT LIVE ALERTS (3 to 5 Current Alerts ONLY - Reqs 1 & 12) */}
@@ -573,7 +573,7 @@ export const StoreDashboardPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-slate-400 text-[11px]">Say "Hey JARVIS, what needs attention?" or click below</span>
+                  <span className="text-slate-400 text-[11px]">Say "Hey Alexa, what needs attention?" or click below</span>
                 </div>
               </div>
 
@@ -665,7 +665,7 @@ export const StoreDashboardPage: React.FC = () => {
                     +12%
                   </span>
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-white">₹1,24,560</div>
+                <div className="text-xl sm:text-2xl font-black text-white">â‚¹1,24,560</div>
                 <p className="text-[10px] text-slate-500">415 transactions verified</p>
               </div>
 
@@ -677,7 +677,7 @@ export const StoreDashboardPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="text-xl sm:text-2xl font-black text-white">842</div>
-                <p className="text-[10px] text-slate-500">Peak dwell: 6:00 PM – 7:30 PM</p>
+                <p className="text-[10px] text-slate-500">Peak dwell: 6:00 PM â€“ 7:30 PM</p>
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md space-y-1">
@@ -800,10 +800,10 @@ export const StoreDashboardPage: React.FC = () => {
                     <BarChart data={salesTrendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                       <XAxis dataKey="time" stroke="#64748b" fontSize={11} />
-                      <YAxis stroke="#64748b" fontSize={11} tickFormatter={(val) => `₹${val / 1000}k`} />
+                      <YAxis stroke="#64748b" fontSize={11} tickFormatter={(val) => `â‚¹${val / 1000}k`} />
                       <Tooltip
                         contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
-                        formatter={(val: any) => [`₹${Number(val).toLocaleString()}`, 'Sales']}
+                        formatter={(val: any) => [`â‚¹${Number(val).toLocaleString()}`, 'Sales']}
                       />
                       <Bar dataKey="sales" fill="#10b981" radius={[6, 6, 0, 0]} />
                     </BarChart>
@@ -880,7 +880,7 @@ export const StoreDashboardPage: React.FC = () => {
                 </p>
               </div>
               <Link to="/store/inventory" className="text-xs text-emerald-400 hover:underline">
-                Open Full Catalog View →
+                Open Full Catalog View â†’
               </Link>
             </div>
 
@@ -902,7 +902,7 @@ export const StoreDashboardPage: React.FC = () => {
                       <div key={so.id} className="p-3 bg-rose-950/20 border border-rose-500/30 rounded-2xl flex items-center justify-between text-xs">
                         <div>
                           <h4 className="font-bold text-white">{prod?.name || so.product_id} (Stock: 0)</h4>
-                          <p className="text-[11px] text-rose-300">Aisle: {prod?.aisle || 'Shelf'} • Critical deficit</p>
+                          <p className="text-[11px] text-rose-300">Aisle: {prod?.aisle || 'Shelf'} â€¢ Critical deficit</p>
                         </div>
                         <button
                           onClick={() => navigate('/store/recommendations')}
@@ -976,13 +976,13 @@ export const StoreDashboardPage: React.FC = () => {
                   setCctvFocus({
                     videoId: 'cctv_001_shoplifting_jacket',
                     cameraId: 'CAM-04B',
-                    note: 'Camera 4 · High Severity Concealment at 14:32'
+                    note: 'Camera 4 Â· High Severity Concealment at 14:32'
                   });
                   handleSelectTab('cctv');
                 }}
                 className="text-xs text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
-                <span>Switch to Live CCTV Surveillance Feeds →</span>
+                <span>Switch to Live CCTV Surveillance Feeds â†’</span>
               </button>
             </div>
 
@@ -1142,7 +1142,7 @@ export const StoreDashboardPage: React.FC = () => {
                         </span>
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono">
-                        Type: {sec.event_type} • ID: {sec.id}
+                        Type: {sec.event_type} â€¢ ID: {sec.id}
                       </div>
                     </div>
                     <span className="text-[10px] text-slate-500 whitespace-nowrap">
@@ -1215,8 +1215,8 @@ export const StoreDashboardPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Existing HindsightMemoryPanel Component */}
-            <HindsightMemoryPanel />
+            {/* Existing NativeMemoryPanel Component */}
+            <NativeMemoryPanel />
           </div>
         )}
 
@@ -1232,7 +1232,7 @@ export const StoreDashboardPage: React.FC = () => {
                   Deterministic Business Impact & ROI Engine
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Deterministic arithmetic on completed store interventions • Zero AI Math • 3-Tier Classification
+                  Deterministic arithmetic on completed store interventions â€¢ Zero AI Math â€¢ 3-Tier Classification
                 </p>
               </div>
               <button
@@ -1385,7 +1385,7 @@ export const StoreDashboardPage: React.FC = () => {
                     <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">
                       {businessImpact.netBusinessImpact.formattedValue}
                     </div>
-                    <p className="text-[10px] text-emerald-300/70 mt-0.5">Gross Benefit − Operational Cost</p>
+                    <p className="text-[10px] text-emerald-300/70 mt-0.5">Gross Benefit âˆ’ Operational Cost</p>
                   </div>
                   <button
                     type="button"
@@ -1403,7 +1403,7 @@ export const StoreDashboardPage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                    Autonomous Closed-Loop: Think → Decide → Act → Measure → Remember → Improve
+                    Autonomous Closed-Loop: Think â†’ Decide â†’ Act â†’ Measure â†’ Remember â†’ Improve
                   </span>
                   {activeLoopResult && (
                     <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
@@ -1613,3 +1613,4 @@ export const StoreDashboardPage: React.FC = () => {
     </div>
   );
 };
+

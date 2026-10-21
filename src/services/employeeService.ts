@@ -1,5 +1,5 @@
-import { db } from './db.js';
-import { hindsightService } from './hindsightService.js';
+﻿import { db } from './db.js';
+import { memoryService } from './nativeMemoryService.js';
 import { securityAgent } from './securityAgent.js';
 import {
   EmployeeAccount,
@@ -411,7 +411,7 @@ class EmployeeService {
       ? 'Shopper basket quantity disparity resolved smoothly via customer self-correction; customer integrity confirmed.'
       : 'Confirmed physical item mismatch verified by employee on site; strengthens deterministic threshold gating.';
 
-    const retainResult = await hindsightService.retainSecurityExperience({
+    const retainResult = await memoryService.retainSecurityExperience({
       incidentType: incidentTypeLabel,
       pattern: patternDesc,
       investigationDetails: `Physical verification conducted on site by ${empName} (${empId}). Resolution action: ${action}. Notes: ${resolutionSummary}`,
@@ -554,3 +554,5 @@ class EmployeeService {
 }
 
 export const employeeService = new EmployeeService();
+
+

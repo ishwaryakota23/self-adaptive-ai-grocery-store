@@ -214,7 +214,7 @@ export const ManagerMobileDashboard: React.FC = () => {
                 <span>Laptop browser session is active. In-store desk alerts are enabled.</span>
               ) : (
                 <span className="text-rose-300 font-medium">
-                  Desktop workstation is unattended. <strong>Automated JARVIS phone calling is ARMED</strong> to ring this phone for any critical security incident.
+                  Desktop workstation is unattended. <strong>Automated GrocerAI phone calling is ARMED</strong> to ring this phone for any critical security incident.
                 </span>
               )}
             </p>
@@ -256,7 +256,7 @@ export const ManagerMobileDashboard: React.FC = () => {
         </div>
 
         <p className="text-xs text-slate-300 leading-relaxed">
-          When fresh suspicious CCTV footage is detected while you are away or stuck in traffic, JARVIS immediately calls your direct line (+91 {manager.phone}).
+          When fresh suspicious CCTV footage is detected while you are away or stuck in traffic, the GrocerAI voice assistant calls your direct line (+91 {manager.phone}).
         </p>
 
         {/* Action Trigger Button */}

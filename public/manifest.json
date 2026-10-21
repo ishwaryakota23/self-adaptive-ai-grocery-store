@@ -1,7 +1,7 @@
 {
   "name": "GrocerAI Manager Sentinel",
   "short_name": "Manager AI",
-  "description": "On-The-Go Store Management and Automated JARVIS Telephony for GrocerAI Supermarket Branch #104",
+  "description": "On-the-go grocery shopping, store management, and Alexa+ assistance for GrocerAI Supermarket Branch #104",
   "start_url": "/manager/mobile",
   "scope": "/",
   "display": "standalone",

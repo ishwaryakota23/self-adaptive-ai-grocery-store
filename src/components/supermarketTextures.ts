@@ -272,7 +272,7 @@ export function createKioskScreenTexture(
     ctx.font = '18px "Segoe UI", sans-serif';
     ctx.fillStyle = '#64748b';
     ctx.fillText('Experience autonomous shopping.', 256, 255);
-    ctx.fillText('Shop freely through aisles with mobile + JARVIS.', 256, 285);
+    ctx.fillText('Shop freely through aisles with mobile + Alexa+.', 256, 285);
 
     // Big green "START SHOPPING" button
     ctx.fillStyle = '#059669';

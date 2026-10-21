@@ -46,15 +46,15 @@ export const StoreMemoryPage: React.FC = () => {
 
           <div className="flex items-center gap-2 bg-purple-950/40 border border-purple-500/30 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-purple-300">
             <BrainCircuit className="w-3.5 h-3.5" />
-            <span>Hindsight Knowledge Engine</span>
+            <span>Legacy Memory Simulation</span>
           </div>
         </div>
 
         {/* Hindsight Architectural Separation Callout (Section 28 & 38) */}
         <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl flex items-center justify-between text-xs text-slate-400">
           <span>
-            <strong className="text-emerald-400">Hindsight Memory Boundary: </strong>
-            The scenarios and metrics on this page are synthetic demonstrations. A real stored memory is confirmed only by a successful Hindsight Cloud operation.
+            <strong className="text-emerald-400">Simulation boundary: </strong>
+            The scenarios and metrics on this page are scripted examples, not records from native persistent memory. A memory is persisted only when the native Supabase write succeeds.
           </span>
           <span className="text-purple-400 font-mono font-bold text-[11px] shrink-0 ml-4">
             SYNTHETIC DEMO DATA
@@ -68,7 +68,7 @@ export const StoreMemoryPage: React.FC = () => {
               <Brain className="w-5 h-5 text-indigo-400" />
               <div>
                 <h3 className="text-sm font-bold text-white">Demonstrable Store Policy Adaptation</h3>
-                <p className="text-xs text-slate-400">Live trace showing how past stockouts & queues modified agent decision policy</p>
+                <p className="text-xs text-slate-400">Scripted trace illustrating how past stockouts and queues could affect an agent policy</p>
               </div>
             </div>
 
@@ -143,7 +143,7 @@ export const StoreMemoryPage: React.FC = () => {
                 <span>Recorded: {mem.recorded_at.split('T')[0]}</span>
                 <span className="text-emerald-400 flex items-center gap-1 font-bold">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Synthetic example; Cloud retention not verified
+                  Synthetic example; native memory not verified
                 </span>
               </div>
             </div>

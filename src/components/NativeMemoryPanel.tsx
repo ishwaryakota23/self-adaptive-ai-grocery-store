@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Brain,
   Sparkles,
@@ -14,11 +14,11 @@ import {
   ShieldCheck,
   AlertCircle
 } from 'lucide-react';
-import { hindsightService, MemoryActivityLogEntry } from '../services/hindsightService';
-import { hindsightBankAvailabilityLabel, hindsightConnectionLabel } from '../services/hindsightDashboardStatus';
-import { HindsightLearningLab } from './HindsightLearningLab';
+import { memoryService, MemoryActivityLogEntry } from '../services/nativeMemoryService';
+import { memoryAvailabilityLabel, memoryConnectionLabel } from '../services/memoryDashboardStatus';
+import { NativeMemoryLearningLab } from './NativeMemoryLearningLab';
 
-export const HindsightMemoryPanel: React.FC = () => {
+export const NativeMemoryPanel: React.FC = () => {
   const [isHealthy, setIsHealthy] = useState<boolean | null>(null);
   const [activities, setActivities] = useState<MemoryActivityLogEntry[]>([]);
   const [query, setQuery] = useState('');
@@ -34,25 +34,25 @@ export const HindsightMemoryPanel: React.FC = () => {
 
   const checkStatus = async () => {
     try {
-      const healthy = await hindsightService.isHealthy();
+      const healthy = await memoryService.isHealthy();
       setIsHealthy(healthy);
-      setServiceError(hindsightService.getHealthError());
+      setServiceError(memoryService.getHealthError());
       try {
-        setActivities(await hindsightService.fetchActivityLog());
+        setActivities(await memoryService.fetchActivityLog());
         setActivityError('');
       } catch (error: any) {
         setActivities([]);
-        setActivityError(error?.message || 'Hindsight Cloud audit logs are unavailable.');
+        setActivityError(error?.message || 'Native Memory Cloud audit logs are unavailable.');
       }
       setLastRefreshed(new Date().toLocaleTimeString());
     } catch (error: any) {
       setIsHealthy(false);
-      setServiceError(error?.message || 'Hindsight Cloud status could not be checked.');
+      setServiceError(error?.message || 'Native Memory Cloud status could not be checked.');
     }
   };
 
-  const connectionStatus = hindsightService.getOperationalStatusSnapshot();
-  const connectionLabel = hindsightConnectionLabel(connectionStatus?.state, isHealthy === null);
+  const connectionStatus = memoryService.getOperationalStatusSnapshot();
+  const connectionLabel = memoryConnectionLabel(connectionStatus?.state, isHealthy === null);
 
   useEffect(() => {
     checkStatus();
@@ -66,17 +66,17 @@ export const HindsightMemoryPanel: React.FC = () => {
     setQueryError('');
     try {
       const bankId = queryBank === 'store'
-        ? hindsightService.getStoreBank()
+        ? memoryService.getStoreBank()
         : queryBank === 'security'
-        ? hindsightService.getSecurityBank()
-        : hindsightService.getCustomerBank(customerId);
+        ? memoryService.getSecurityBank()
+        : memoryService.getCustomerBank(customerId);
 
-      const recallRes = await hindsightService.recall(bankId, query.trim());
+      const recallRes = await memoryService.recall(bankId, query.trim());
       setQueryResults(recallRes.success ? recallRes.results : []);
       setQueryError(recallRes.error || '');
-      try { setActivities(await hindsightService.fetchActivityLog()); } catch { setActivities([]); }
+      try { setActivities(await memoryService.fetchActivityLog()); } catch { setActivities([]); }
     } catch (err: any) {
-      setQueryError(err?.message || 'Hindsight recall failed. Check the server Cloud configuration and service status.');
+      setQueryError(err?.message || 'Native Memory recall failed. Check the server Cloud configuration and service status.');
       setQueryResults([]);
     } finally {
       setIsQuerying(false);
@@ -94,7 +94,7 @@ export const HindsightMemoryPanel: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-black text-white flex items-center gap-2">
-                Hindsight Experiential Memory & Learning
+                Native Memory Experiential Memory & Learning
               </h2>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                 isHealthy === true
@@ -108,13 +108,13 @@ export const HindsightMemoryPanel: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Continuous experiential learning: <span className="text-slate-300 font-medium">Observe → Recall → Reason → Act → Retain → Adapt</span>
+              Continuous experiential learning: <span className="text-slate-300 font-medium">Observe â†’ Recall â†’ Reason â†’ Act â†’ Retain â†’ Adapt</span>
             </p>
             {serviceError && <p className="mt-2 max-w-2xl text-xs text-rose-300" role="status">
               {serviceError}
               {connectionStatus?.diagnosticCode && <span className="ml-1 font-mono text-[10px] text-rose-200">{connectionStatus.diagnosticCode}</span>}
             </p>}
-            <p className="mt-1 text-[10px] text-slate-500">Activity feed reads Hindsight Cloud audit logs for the store and security banks.</p>
+            <p className="mt-1 text-[10px] text-slate-500">Activity feed reads Native Memory Cloud audit logs for the store and security banks.</p>
           </div>
         </div>
 
@@ -160,10 +160,10 @@ export const HindsightMemoryPanel: React.FC = () => {
             <Database className="w-4 h-4 text-indigo-400" />
             <div>
               <div className="text-[11px] text-slate-400 font-medium">Store Operational Bank</div>
-              <div className="text-white font-mono font-bold">{hindsightService.getStoreBank()}</div>
+              <div className="text-white font-mono font-bold">{memoryService.getStoreBank()}</div>
             </div>
           </div>
-          <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold ${connectionStatus?.storeBank.availability === 'available' ? 'text-emerald-400 bg-emerald-950/50 border-emerald-500/20' : 'text-rose-300 bg-rose-950/50 border-rose-500/20'}`}>{hindsightBankAvailabilityLabel(connectionStatus?.storeBank.availability)}</span>
+          <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold ${connectionStatus?.storeBank.availability === 'available' ? 'text-emerald-400 bg-emerald-950/50 border-emerald-500/20' : 'text-rose-300 bg-rose-950/50 border-rose-500/20'}`}>{memoryAvailabilityLabel(connectionStatus?.storeBank.availability)}</span>
         </div>
 
         <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
@@ -182,10 +182,10 @@ export const HindsightMemoryPanel: React.FC = () => {
             <ShieldCheck className="w-4 h-4 text-amber-400" />
             <div>
               <div className="text-[11px] text-slate-400 font-medium">Security Bank</div>
-              <div className="text-white font-mono font-bold">{hindsightService.getSecurityBank()}</div>
+              <div className="text-white font-mono font-bold">{memoryService.getSecurityBank()}</div>
             </div>
           </div>
-          <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold ${connectionStatus?.securityBank.availability === 'available' ? 'text-emerald-400 bg-emerald-950/50 border-emerald-500/20' : 'text-rose-300 bg-rose-950/50 border-rose-500/20'}`}>{hindsightBankAvailabilityLabel(connectionStatus?.securityBank.availability)}</span>
+          <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold ${connectionStatus?.securityBank.availability === 'available' ? 'text-emerald-400 bg-emerald-950/50 border-emerald-500/20' : 'text-rose-300 bg-rose-950/50 border-rose-500/20'}`}>{memoryAvailabilityLabel(connectionStatus?.securityBank.availability)}</span>
         </div>
 
         <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
@@ -209,7 +209,7 @@ export const HindsightMemoryPanel: React.FC = () => {
       {/* TAB 1: DEMONSTRABLE LEARNING CURVE */}
       {activeTab === 'learning' && (
         <div className="space-y-4">
-          <HindsightLearningLab />
+          <NativeMemoryLearningLab />
         </div>
       )}
 
@@ -218,7 +218,7 @@ export const HindsightMemoryPanel: React.FC = () => {
         <div className="space-y-3">
           {activityError ? (
             <div className="text-center py-8 text-xs text-amber-200 bg-amber-950/20 border border-amber-800/60 rounded-2xl" role="status">
-              Hindsight Cloud audit activity could not be verified: {activityError}
+              Native Memory Cloud audit activity could not be verified: {activityError}
             </div>
           ) : activities.length === 0 ? (
             <div className="text-center py-8 text-xs text-slate-500 bg-slate-950/40 border border-slate-800/60 rounded-2xl">
@@ -244,7 +244,7 @@ export const HindsightMemoryPanel: React.FC = () => {
                     <div>
                       <div className="text-white font-medium">{act.input}</div>
                       <div className="text-[11px] text-slate-400">
-                        {act.resultSummary} • Bank: <span className="font-mono text-slate-300">{act.bankId}</span>
+                        {act.resultSummary} â€¢ Bank: <span className="font-mono text-slate-300">{act.bankId}</span>
                       </div>
                     </div>
                   </div>
@@ -334,7 +334,7 @@ export const HindsightMemoryPanel: React.FC = () => {
               </div>
               {queryResults.length === 0 ? (
                 <div className="text-center py-6 text-xs text-slate-500 bg-slate-950/40 border border-slate-800/60 rounded-2xl">
-                  {queryError || <>No memories matched this query in bank <span className="font-mono">{queryBank === 'store' ? hindsightService.getStoreBank() : queryBank === 'security' ? hindsightService.getSecurityBank() : hindsightService.getCustomerBank(customerId)}</span>.</>}
+                  {queryError || <>No memories matched this query in bank <span className="font-mono">{queryBank === 'store' ? memoryService.getStoreBank() : queryBank === 'security' ? memoryService.getSecurityBank() : memoryService.getCustomerBank(customerId)}</span>.</>}
                 </div>
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -374,3 +374,7 @@ export const HindsightMemoryPanel: React.FC = () => {
     </div>
   );
 };
+
+
+
+

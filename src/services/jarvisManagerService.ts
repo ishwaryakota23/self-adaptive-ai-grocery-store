@@ -1,9 +1,9 @@
-import { db } from './db.js';
+﻿import { db } from './db.js';
 import { storeAgent } from './storeAgent.js';
 import { storeAgentTools } from './storeAgentTools.js';
 import { securityAgent } from './securityAgent.js';
 import { hindsightEngine } from './hindsightEngine.js';
-import { hindsightService } from './hindsightService.js';
+import { memoryService } from './nativeMemoryService.js';
 import { roiEngine } from './roiEngine.js';
 import { employeeService } from './employeeService.js';
 import { cctvManifestService } from './cctvManifestService.js';
@@ -47,7 +47,7 @@ export interface ManagerNavigationEvent {
 
 export interface JarvisMessage {
   id: string;
-  sender: 'MANAGER' | 'JARVIS';
+  sender: 'MANAGER' | 'Alexa+';
   text: string;
   timestamp: string;
   actionCard?: {
@@ -129,7 +129,7 @@ class JarvisManagerService {
       try {
         listener();
       } catch (err) {
-        console.error('[JARVIS] Listener notification error:', err);
+        console.error('[Alexa+] Listener notification error:', err);
       }
     }
   }
@@ -148,7 +148,7 @@ class JarvisManagerService {
       try {
         l(state);
       } catch (e) {
-        console.error('[JARVIS] Voice state listener error:', e);
+        console.error('[Alexa+] Voice state listener error:', e);
       }
     }
   }
@@ -171,7 +171,7 @@ class JarvisManagerService {
       try {
         l(state);
       } catch (e) {
-        console.error('[JARVIS] Conversation state listener error:', e);
+        console.error('[Alexa+] Conversation state listener error:', e);
       }
     }
   }
@@ -202,7 +202,7 @@ class JarvisManagerService {
       try {
         l(event);
       } catch (err) {
-        console.error('[JARVIS] Navigation listener error:', err);
+        console.error('[Alexa+] Navigation listener error:', err);
       }
     }
   }
@@ -212,7 +212,7 @@ class JarvisManagerService {
     return this.createJarvisResponse(initialGreeting);
   }
 
-  public endConversation(spokenReason = "Ending conversation session. Say 'Hey JARVIS' whenever you need me.") {
+  public endConversation(spokenReason = "Ending conversation session. Say 'Hey Alexa' whenever you need me.") {
     this.setConversationState('WAKE_WORD_MONITORING');
     this.lastDiscussedTopic = null;
     return this.createJarvisResponse(spokenReason);
@@ -260,7 +260,7 @@ class JarvisManagerService {
 
   /**
    * Proactive Stockout & Exception Voice Alert (User Request 10)
-   * If Amul Taaza Milk is stocked out, JARVIS proactively alerts the manager:
+   * If Amul Taaza Milk is stocked out, Alexa+ proactively alerts the manager:
    * "Operational alert, Manager: Amul Taaza Milk has stocked out in Aisle 1. Store Agent recommends restocking 42 units based on converged Sunday peak demand. Should I approve the restock now?"
    */
   public triggerProactiveStockoutAlert() {
@@ -301,16 +301,16 @@ class JarvisManagerService {
     const criticalCount = alerts.filter(a => a.severity === 'CRITICAL').length;
     const highCount = alerts.filter(a => a.severity === 'HIGH').length;
 
-    let greetingText = 'Good day, Manager. JARVIS operational command interface active and synchronized with Customer, Store, and Security Agents.';
+    let greetingText = 'Good day, Manager. Alexa+ operational command interface active and synchronized with Customer, Store, and Security Agents.';
     if (criticalCount > 0 || highCount > 0) {
-      greetingText += ` I have identified ${alerts.length} prioritized operational alerts requiring your attention. Say "Hey JARVIS, show me the alerts" or ask for a briefing.`;
+      greetingText += ` I have identified ${alerts.length} prioritized operational alerts requiring your attention. Say "Hey Alexa, show me the alerts" or ask for a briefing.`;
     } else {
-      greetingText += ' All store systems are currently flowing within nominal parameters. Say "Hey JARVIS, show me the alerts" or ask any operational query.';
+      greetingText += ' All store systems are currently flowing within nominal parameters. Say "Hey Alexa, show me the alerts" or ask any operational query.';
     }
 
     this.messages.push({
       id: `msg-jarvis-init-${Date.now()}`,
-      sender: 'JARVIS',
+      sender: 'Alexa+',
       text: greetingText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
@@ -340,7 +340,7 @@ class JarvisManagerService {
    * Emergency Proactive Voice Alert for Critical Events (Requirement 9)
    */
   public triggerEmergencyVoiceAlert(event: SecurityEvent) {
-    const speechText = `Hey Manager, this is JARVIS. We have an emergency. A critical security event has been detected: ${event.details}. Security Agent has classified this event as Critical. Would you like me to open the surveillance view?`;
+    const speechText = `Hey Manager, this is Alexa+. We have an emergency. A critical security event has been detected: ${event.details}. Security Agent has classified this event as Critical. Would you like me to open the surveillance view?`;
 
     this.pendingContextQuestion = 'VIEW_SURVEILLANCE';
     this.setConversationState('CONVERSATION_ACTIVE');
@@ -355,7 +355,7 @@ class JarvisManagerService {
 
     const jarvisMsg: JarvisMessage = {
       id: `msg-jarvis-alert-${Date.now()}`,
-      sender: 'JARVIS',
+      sender: 'Alexa+',
       text: speechText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       actionCard: {
@@ -507,11 +507,11 @@ class JarvisManagerService {
       lower.includes('close conversation') ||
       lower.includes('goodbye') ||
       lower.includes("that's all") ||
-      lower.includes('bye jarvis')
+      lower.includes('bye alexa')
     ) {
       this.setConversationState('WAKE_WORD_MONITORING');
       this.lastDiscussedTopic = null;
-      return this.createJarvisResponse("Ending conversation session. Say 'Hey JARVIS' whenever you need me.");
+      return this.createJarvisResponse("Ending conversation session. Say 'Hey Alexa' whenever you need me.");
     }
 
     // -----------------------------------------------------------------------
@@ -538,7 +538,7 @@ class JarvisManagerService {
       ) {
         this.setConversationState('WAKE_WORD_MONITORING');
         this.lastDiscussedTopic = null;
-        return this.createJarvisResponse("Ending conversation session. Say 'Hey JARVIS' whenever you need me.");
+        return this.createJarvisResponse("Ending conversation session. Say 'Hey Alexa' whenever you need me.");
       }
     }
 
@@ -593,10 +593,10 @@ class JarvisManagerService {
       if (isAffirmative) {
         this.pendingAction = null;
         this.pendingContextQuestion = null;
-        db.restockProduct('prod-taaza-milk', 42, 'Approved by Store Manager Vikram via JARVIS');
+        db.restockProduct('prod-taaza-milk', 42, 'Approved by Store Manager Vikram via Alexa+');
         const pendingRec = db.getAIRecommendations().find(r => r.status === 'pending' && (r.product_id === 'prod-taaza-milk' || r.id === 'rec-taaza-milk' || r.type === 'restock'));
         if (pendingRec) {
-          storeAgent.approveRecommendation(pendingRec.id, 'Store Manager Vikram via JARVIS');
+          storeAgent.approveRecommendation(pendingRec.id, 'Store Manager Vikram via Alexa+');
         }
         return this.createJarvisResponse("Restock of 42 units of Amul Taaza Milk approved and purchase order dispatched to supplier.", {
           actionCard: {
@@ -626,7 +626,7 @@ class JarvisManagerService {
 
     // -----------------------------------------------------------------------
     // Flow: Manager Spoken Authorization - Remote Kiosk 3 Activation (Section 3, 4, 5, 6)
-    // "Hey JARVIS, Kiosk 2 is congested. Open Kiosk 3" / "Open Kiosk 3" / "Activate Kiosk 3"
+    // "Hey Alexa+, Kiosk 2 is congested. Open Kiosk 3" / "Open Kiosk 3" / "Activate Kiosk 3"
     // -----------------------------------------------------------------------
     const isKiosk3Activation =
       (lower.includes('open') || lower.includes('activate') || lower.includes('start')) &&
@@ -642,7 +642,7 @@ class JarvisManagerService {
       await kioskService.activateKiosk({
         kioskId: 'KIOSK_03',
         requestedBy: 'manager',
-        commandSource: 'JARVIS',
+        commandSource: 'Alexa+',
         message: 'Kiosk 3 is active. You can use it.'
       });
 
@@ -686,7 +686,7 @@ class JarvisManagerService {
       const targetRecId = this.pendingAction?.recommendationId || pendingRec?.id;
 
       if (targetRecId) {
-        const modRes = storeAgent.modifyRecommendation(targetRecId, { customQuantity: targetQty }, 'Store Manager via JARVIS');
+        const modRes = storeAgent.modifyRecommendation(targetRecId, { customQuantity: targetQty }, 'Store Manager via Alexa+');
         this.pendingAction = null;
         this.pendingContextQuestion = null;
 
@@ -709,9 +709,9 @@ class JarvisManagerService {
             status: 'EXECUTED'
           },
           roiBreakdown: {
-            expectedBenefit: roi.expectedBenefitFormatted || '₹1,400',
-            decisionCost: roi.decisionCostFormatted || '₹350',
-            realizedImpact: roi.realizedImpactFormatted || '₹1,050',
+            expectedBenefit: roi.expectedBenefitFormatted || 'â‚¹1,400',
+            decisionCost: roi.decisionCostFormatted || 'â‚¹350',
+            realizedImpact: roi.realizedImpactFormatted || 'â‚¹1,050',
             discrepancyNote: roi.discrepancyNote || 'Closed-loop calibrated impact'
           }
         });
@@ -741,7 +741,7 @@ class JarvisManagerService {
         }
       }
     } catch (err) {
-      console.warn('[JARVIS] Network call to /api/jarvis-manager failed, using local server engine:', err);
+      console.warn('[Alexa+] Network call to /api/jarvis-manager failed, using local server engine:', err);
     }
 
     if (!agentResponse) {
@@ -778,7 +778,7 @@ class JarvisManagerService {
         await kioskService.activateKiosk({
           kioskId: 'KIOSK_03',
           requestedBy: 'manager',
-          commandSource: 'JARVIS',
+          commandSource: 'Alexa+',
           message: 'Kiosk 3 is active. You can use it.'
         });
         try {
@@ -788,10 +788,10 @@ class JarvisManagerService {
         storeAgent.openVerificationKiosk(4);
       }
     } else if (agentResponse.actionCard?.type === 'APPROVE_RESTOCK' || agentResponse.action === 'APPROVE_RESTOCK_42') {
-      db.restockProduct('prod-taaza-milk', 42, 'Approved by Store Manager Vikram via JARVIS');
+      db.restockProduct('prod-taaza-milk', 42, 'Approved by Store Manager Vikram via Alexa+');
       const pendingRec = db.getAIRecommendations().find(r => r.status === 'pending' && (r.product_id === 'prod-taaza-milk' || r.id === 'rec-taaza-milk' || r.type === 'restock'));
       if (pendingRec) {
-        storeAgent.approveRecommendation(pendingRec.id, 'Store Manager Vikram via JARVIS');
+        storeAgent.approveRecommendation(pendingRec.id, 'Store Manager Vikram via Alexa+');
       }
     }
 
@@ -890,7 +890,7 @@ class JarvisManagerService {
 
     if (action.type === 'APPROVE_RESTOCK' && action.recommendationId) {
       const rec = db.getAIRecommendations().find(r => r.id === action.recommendationId);
-      const res = storeAgent.approveRecommendation(action.recommendationId, 'Store Manager via JARVIS');
+      const res = storeAgent.approveRecommendation(action.recommendationId, 'Store Manager via Alexa+');
       const roi = roiEngine.evaluateRecommendationROI({
         recommendationId: action.recommendationId,
         type: 'RESTOCK',
@@ -910,9 +910,9 @@ class JarvisManagerService {
           status: 'EXECUTED'
         },
         roiBreakdown: {
-          expectedBenefit: roi.expectedBenefitFormatted || '₹1,470',
-          decisionCost: roi.decisionCostFormatted || '₹380',
-          realizedImpact: roi.realizedImpactFormatted || '₹1,090',
+          expectedBenefit: roi.expectedBenefitFormatted || 'â‚¹1,470',
+          decisionCost: roi.decisionCostFormatted || 'â‚¹380',
+          realizedImpact: roi.realizedImpactFormatted || 'â‚¹1,090',
           discrepancyNote: roi.discrepancyNote || 'Closed-loop realized outcome'
         }
       });
@@ -950,19 +950,19 @@ class JarvisManagerService {
     if (query.includes('electrical') || query.includes('arc') || (openSec && openSec.event_type === 'ELECTRICAL_HAZARD')) {
       targetClip = manifest.find(m => m.video_id.includes('electrical')) || manifest[2];
       camId = targetClip.camera_id;
-      camLabel = targetClip.camera_label || 'Camera 1 · Aisle 4 Pillar';
+      camLabel = targetClip.camera_label || 'Camera 1 Â· Aisle 4 Pillar';
       scenario = 'Electrical Hazard & Short Circuit';
       time = '16:42';
     } else if (query.includes('kiosk') || query.includes('mismatch') || (openSec && openSec.event_type === 'CHECKOUT_QUANTITY_MISMATCH')) {
       targetClip = manifest.find(m => m.video_id.includes('checkout_mismatch')) || manifest[1];
       camId = targetClip.camera_id;
-      camLabel = targetClip.camera_label || 'Camera 5 · Checkout Bay 3';
+      camLabel = targetClip.camera_label || 'Camera 5 Â· Checkout Bay 3';
       scenario = 'Checkout Discrepancy (Quantity Mismatch)';
       time = '18:15';
     } else if (query.includes('scuffle') || query.includes('fight') || (openSec && openSec.event_type === 'SAFETY_DISTURBANCE')) {
       targetClip = manifest.find(m => m.video_id.includes('confrontation') || m.video_id.includes('scuffle')) || manifest[3];
       camId = targetClip.camera_id;
-      camLabel = targetClip.camera_label || 'Camera 3 · Aisle 3';
+      camLabel = targetClip.camera_label || 'Camera 3 Â· Aisle 3';
       scenario = targetClip.scenario_title || 'Safety Disturbance';
       time = '14:28';
     } else {
@@ -981,7 +981,7 @@ class JarvisManagerService {
       cctvCameraId: camId,
       securityEventId: openSec?.id,
       timestamp: time,
-      focusNote: `${camLabel} · High Severity ${scenario} detected at ${time}`
+      focusNote: `${camLabel} Â· High Severity ${scenario} detected at ${time}`
     });
 
     this.navigateToSurveillance(targetClip.video_id);
@@ -1012,16 +1012,16 @@ class JarvisManagerService {
     const step = storeAgent.getRestockConvergenceStep();
     const convergenceTrace = hindsightEngine.getTraceById('STORE_RESTOCK_CONVERGENCE');
 
-    const speech = `Synthetic demonstration only — these seeded scenario values are not verified Hindsight Cloud memories or live store measurements. Manager, the demo trace illustrates convergence to 42 units across Sunday evening rush iterations:
+    const speech = `Synthetic demonstration only â€” these seeded scenario values are not verified Hindsight Cloud memories or live store measurements. Manager, the demo trace illustrates convergence to 42 units across Sunday evening rush iterations:
 
-1. Baseline: 30 units stocked out in 42 minutes with 18 unmet requests (~₹1,450 lost sales).
+1. Baseline: 30 units stocked out in 42 minutes with 18 unmet requests (~â‚¹1,450 lost sales).
 2. Iteration 1: +8 units delta (38 units) pushed availability to 7:15 PM, but still experienced 4 unmet requests.
 3. Iteration 2: +6 surge buffer (44 units) prevented stockout completely, but resulted in 3 excess units on Monday morning.
 4. Optimum Convergence: Store Hindsight synthesized stockout loss vs residual holding cost, converging the equilibrium policy to exactly 42 units with zero stockouts and zero waste.`;
 
     return this.createJarvisResponse(speech, {
       hindsightTrace: {
-        title: 'Sunday Evening Restock Policy Convergence (30 → 38 → 44 → 42 Units)',
+        title: 'Sunday Evening Restock Policy Convergence (30 â†’ 38 â†’ 44 â†’ 42 Units)',
         domain: 'SYNTHETIC STORE DEMO',
         lesson: 'Equilibrium reached: 42 units balance peak footfall demand with zero spoilage.',
         convergenceStep: step,
@@ -1041,7 +1041,7 @@ class JarvisManagerService {
     const storeConv = traces.find(t => t.id === 'STORE_RESTOCK_CONVERGENCE');
     const secFalse = traces.find(t => t.id === 'SEC_FALSE_POSITIVE_SHELF');
 
-    const speech = `Synthetic demonstration summary — the following seeded examples are not verified Hindsight Cloud memories and do not prove production learning:
+    const speech = `Synthetic demonstration summary â€” the following seeded examples are not verified Hindsight Cloud memories and do not prove production learning:
 
 1. Customer Agent: Learned customer explicit choice for Artisanal Sourdough over Whole Wheat. Sourdough is dynamically elevated to #1 recommendation. Negative preference learning also suppresses rejected Avocado Oil.
 2. Store Agent: Learned Sunday peak rush velocity, converging replenishment from baseline 30 units to 42 units (0 stockouts, 0 waste).
@@ -1051,7 +1051,7 @@ class JarvisManagerService {
       hindsightTrace: {
         title: 'Cross-Domain Hindsight Adaptation Summary',
         domain: 'SYNTHETIC CROSS-DOMAIN DEMOS',
-        lesson: 'Experience → Outcome → Hindsight Gated → Changed Future Decision across Customer, Store & Security.'
+        lesson: 'Experience â†’ Outcome â†’ Hindsight Gated â†’ Changed Future Decision across Customer, Store & Security.'
       }
     });
   }
@@ -1066,25 +1066,25 @@ class JarvisManagerService {
       priority: 'high'
     });
 
-    let speechPrefix = 'Manager, here is the closed-loop financial ROI analysis where Expected ≠ Realized:';
+    let speechPrefix = 'Manager, here is the closed-loop financial ROI analysis where Expected â‰  Realized:';
     if (priorTopic === 'RESTOCK_42_UNITS' || this.lastDiscussedTopic === 'RESTOCK_42_UNITS') {
-      speechPrefix = `Manager, following up on our 42-unit replenishment decision: That decision performed with a realized net impact of ${milkRoi.realizedImpactFormatted || '₹1,090'} (Expected Gross Opportunity was ${milkRoi.expectedBenefitFormatted || '₹1,470'}, minus ${milkRoi.decisionCostFormatted || '₹380'} procurement & labor costs). Zero stockouts were recorded, saving an estimated ₹1,450 in lost revenue compared to baseline.`;
+      speechPrefix = `Manager, following up on our 42-unit replenishment decision: That decision performed with a realized net impact of ${milkRoi.realizedImpactFormatted || 'â‚¹1,090'} (Expected Gross Opportunity was ${milkRoi.expectedBenefitFormatted || 'â‚¹1,470'}, minus ${milkRoi.decisionCostFormatted || 'â‚¹380'} procurement & labor costs). Zero stockouts were recorded, saving an estimated â‚¹1,450 in lost revenue compared to baseline.`;
     }
 
     const speech = `${speechPrefix}
  
 For the Amul Taaza Milk replenishment:
-- Expected Gross Opportunity: ${milkRoi.expectedBenefitFormatted || '₹1,470'} (42 units at ₹35)
-- Decision & Handling Cost: ${milkRoi.decisionCostFormatted || '₹380'}
-- Realized Net Impact: ${milkRoi.realizedImpactFormatted || '₹1,090'} (Net financial return achieved)
+- Expected Gross Opportunity: ${milkRoi.expectedBenefitFormatted || 'â‚¹1,470'} (42 units at â‚¹35)
+- Decision & Handling Cost: ${milkRoi.decisionCostFormatted || 'â‚¹380'}
+- Realized Net Impact: ${milkRoi.realizedImpactFormatted || 'â‚¹1,090'} (Net financial return achieved)
  
 Store-wide today, automated interventions have preserved ${roiSummary.totalSalesOpportunityPreserved.formattedValue} in sales and prevented ${roiSummary.totalWastageReduced.formattedValue} in waste, achieving a realized net business impact of ${roiSummary.netBusinessImpact.formattedValue}.`;
  
     return this.createJarvisResponse(speech, {
       roiBreakdown: {
-        expectedBenefit: milkRoi.expectedBenefitFormatted || '₹1,470',
-        decisionCost: milkRoi.decisionCostFormatted || '₹380',
-        realizedImpact: milkRoi.realizedImpactFormatted || '₹1,090',
+        expectedBenefit: milkRoi.expectedBenefitFormatted || 'â‚¹1,470',
+        decisionCost: milkRoi.decisionCostFormatted || 'â‚¹380',
+        realizedImpact: milkRoi.realizedImpactFormatted || 'â‚¹1,090',
         discrepancyNote: milkRoi.discrepancyNote || 'Equilibrium stockout avoidance achieved'
       }
     });
@@ -1093,7 +1093,7 @@ Store-wide today, automated interventions have preserved ${roiSummary.totalSales
   private handleSecurityHindsightExplanation(): JarvisMessage {
     const secTrace = hindsightEngine.getTraceById('SEC_FALSE_POSITIVE_SHELF');
 
-    const speech = `Synthetic security demo only — these rates and examples are not verified Hindsight Cloud memories or live security measurements. The seeded scenario describes isolated shelf lingering as low risk (0.18 vs baseline 0.72), but current alerts must be judged from current evidence. 
+    const speech = `Synthetic security demo only â€” these rates and examples are not verified Hindsight Cloud memories or live security measurements. The seeded scenario describes isolated shelf lingering as low risk (0.18 vs baseline 0.72), but current alerts must be judged from current evidence. 
 
 Historical evidence revealed shoppers were elderly or allergen-conscious consumers comparing ingredient labels. The alert was suppressed to normal monitoring to avoid customer embarrassment and responder alert fatigue.`;
 
@@ -1156,7 +1156,7 @@ Historical evidence revealed shoppers were elderly or allergen-conscious consume
     } else {
       const avgWait = queues.reduce((sum, q) => sum + q.estimated_wait_mins, 0) / (queues.length || 1);
       if (avgWait > 2.0) {
-        issues.push('Kiosk verification wait time increased across Kiosks 1–3.');
+        issues.push('Kiosk verification wait time increased across Kiosks 1â€“3.');
       }
     }
 
@@ -1197,7 +1197,7 @@ Historical evidence revealed shoppers were elderly or allergen-conscious consume
   ): JarvisMessage {
     const msg: JarvisMessage = {
       id: `msg-jarvis-${Date.now()}`,
-      sender: 'JARVIS',
+      sender: 'Alexa+',
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       ...extra
@@ -1264,7 +1264,7 @@ Historical evidence revealed shoppers were elderly or allergen-conscious consume
 
       window.speechSynthesis.speak(utterance);
     } catch (e) {
-      console.warn('[JARVIS] Speech synthesis error:', e);
+      console.warn('[Alexa+] Speech synthesis error:', e);
       echoGuard.onSpeechEnd();
       if (this.conversationState === 'CONVERSATION_ACTIVE') {
         this.setVoiceState('LISTENING');
@@ -1300,3 +1300,5 @@ Historical evidence revealed shoppers were elderly or allergen-conscious consume
 }
 
 export const jarvisManagerService = new JarvisManagerService();
+
+

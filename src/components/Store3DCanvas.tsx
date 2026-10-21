@@ -546,7 +546,7 @@ export const Store3DCanvas: React.FC<Store3DCanvasProps> = ({
 
     scene.add(inspectedPack);
 
-    // Floating Customer JARVIS Orb (Stage 3 in-aisle)
+    // Floating Customer Alexa+ Orb (Stage 3 in-aisle)
     const orbGeo = new THREE.SphereGeometry(0.08, 32, 32);
     const orbMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, wireframe: true });
     const jarvisOrb = new THREE.Mesh(orbGeo, orbMat);
@@ -722,7 +722,7 @@ export const Store3DCanvas: React.FC<Store3DCanvasProps> = ({
         }
       }
 
-      // 7. JARVIS Orb Pulse in Stage 3
+      // 7. Alexa+ Orb Pulse in Stage 3
       if (jarvisOrbRef.current) {
         if (currentStage === 3) {
           jarvisOrbRef.current.visible = true;

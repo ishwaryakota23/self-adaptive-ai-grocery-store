@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -90,13 +90,13 @@ const STORY_STAGES_BY_LANG: Record<LanguageCode, StoryStage[]> = {
     {
       id: 3,
       stepNumber: '03',
-      title: 'AISLE SHOPPING & JARVIS',
+      title: 'AISLE SHOPPING & ALEXA+',
       badge: 'VOICE-GUIDED SHOPPING',
       badgeColor: 'bg-teal-50 text-teal-800 border-teal-300',
       storyText:
-        'Shopper moves through Aisle 02 with their cart. JARVIS responds: â€œCooking oil is on Shelf B2 on your right.â€ Turn-by-turn waypoints light the path.',
-      interactionPrompt: 'â€œWhere can I find cooking oil?â€ â€” JARVIS guides to Shelf B2',
-      agentContext: 'Customer Agent (JARVIS) + Store Agent planogram sync'
+        'Shopper moves through Aisle 02 with their cart. Alexa+ responds with the oil location and lights a route to Shelf B2.',
+      interactionPrompt: '“Where can I find cooking oil?” — Alexa+ guides to Shelf B2',
+      agentContext: 'GrocerAI conversational shopper + Store Agent planogram sync'
     },
     {
       id: 4,
@@ -252,7 +252,7 @@ export const LandingPage: React.FC = () => {
 
   // Audio Narration State (Real Voice Synthesis - One-Way Speech Narration)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [isJarvisSpeaking, setIsJarvisSpeaking] = useState(false);
+  const [isAlexaSpeaking, setIsAlexaSpeaking] = useState(false);
   const [introDescended, setIntroDescended] = useState(false);
 
   const stages = STORY_STAGES_BY_LANG[language] || STORY_STAGES_BY_LANG.en;
@@ -261,7 +261,7 @@ export const LandingPage: React.FC = () => {
   // Subscribe to voiceService status
   useEffect(() => {
     const unsubscribe = voiceService.subscribeStatus((status) => {
-      setIsJarvisSpeaking(status === 'speaking');
+      setIsAlexaSpeaking(status === 'speaking');
     });
     return () => {
       unsubscribe();
@@ -283,7 +283,7 @@ export const LandingPage: React.FC = () => {
       const script = (STAGE_VOICE_SCRIPTS[language] || STAGE_VOICE_SCRIPTS.en)[currentStage];
 
       if (voiceEnabled && script) {
-        // Await speech completion so JARVIS is never interrupted mid-sentence!
+        // Await speech completion so Alexa+ is never interrupted mid-sentence!
         await voiceService.speak(script, language);
       } else {
         // If voice is muted, linger for 7 seconds to read the narrative
@@ -371,7 +371,6 @@ export const LandingPage: React.FC = () => {
             <span className="text-xs font-mono font-black text-slate-900 tracking-wider">
               GROCERAI
             </span>
-            <span className="text-slate-400 font-mono text-xs">â€¢</span>
             <span className="text-xs font-mono text-emerald-700 font-bold">
               BRANCH #104
             </span>
@@ -425,7 +424,7 @@ export const LandingPage: React.FC = () => {
             }`}
           >
             <Bot className="w-3 h-3" />
-            <span>CUSTOMER JARVIS</span>
+            <span>ALEXA+ SHOPPING</span>
           </button>
           <button
             onClick={() => setViewMode('HINDSIGHT')}
@@ -442,7 +441,7 @@ export const LandingPage: React.FC = () => {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          {/* JARVIS Voice Narration Toggle */}
+          {/* Assistant voice narration toggle */}
           <button
             onClick={toggleVoice}
             className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold transition-all shadow-md backdrop-blur-md flex items-center gap-1.5 cursor-pointer ${
@@ -450,18 +449,18 @@ export const LandingPage: React.FC = () => {
                 ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-500/20'
                 : 'bg-white/95 text-slate-700 border-slate-200 hover:text-slate-900'
             }`}
-            title={voiceEnabled ? 'Mute JARVIS Narration' : 'Enable JARVIS Narration'}
+            title={voiceEnabled ? 'Mute Alexa+ narration' : 'Enable Alexa+ narration'}
           >
             {voiceEnabled ? (
               <>
                 <Volume2 className="w-3.5 h-3.5 animate-pulse" />
-                <span className="hidden sm:inline">JARVIS VOICE: ON</span>
+                <span className="hidden sm:inline">ALEXA+ VOICE: ON</span>
                 <span className="sm:hidden">VOICE</span>
               </>
             ) : (
               <>
                 <VolumeX className="w-3.5 h-3.5 text-slate-400" />
-                <span className="hidden sm:inline">JARVIS VOICE: MUTED</span>
+                <span className="hidden sm:inline">ALEXA+ VOICE: MUTED</span>
                 <span className="sm:hidden">MUTED</span>
               </>
             )}
@@ -493,7 +492,7 @@ export const LandingPage: React.FC = () => {
               {viewMode === 'CUSTOMER' && (
                 <>
                   <span className="w-2 h-2 rounded-full bg-teal-500 animate-ping" />
-                  <span className="font-bold text-teal-700">CUSTOMER JARVIS:</span>
+                  <span className="font-bold text-teal-700">ALEXA+ SHOPPING:</span>
                   <span>Voice companion active â€¢ Basket linked to phone â€¢ Waypoints live</span>
                 </>
               )}
@@ -530,10 +529,10 @@ export const LandingPage: React.FC = () => {
             </span>
 
             <div className="flex items-center gap-2">
-              {isJarvisSpeaking && (
+              {isAlexaSpeaking && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-cyan-50 border border-cyan-300 text-cyan-800 animate-pulse shadow-sm">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-ping" />
-                  <span>JARVIS SPEAKING</span>
+                  <span>ALEXA+ SPEAKING</span>
                 </span>
               )}
               <span className="text-xs font-mono text-slate-600">
@@ -545,7 +544,7 @@ export const LandingPage: React.FC = () => {
           {/* Stage Headline & Narrative */}
           <div className="space-y-1">
             <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-              {introDescended ? activeStage.title : 'GROCERAI DIGITAL TWIN â€¢ BRANCH #104'}
+              {introDescended ? activeStage.title : 'GROCERAI DIGITAL TWIN · BRANCH #104'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
               {introDescended
@@ -633,4 +632,3 @@ export const LandingPage: React.FC = () => {
     </div>
   );
 };
-

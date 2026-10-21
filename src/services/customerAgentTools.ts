@@ -1,9 +1,9 @@
-import { db } from './db.js';
+﻿import { db } from './db.js';
 import { cartService } from './cartService.js';
 import { missionService } from './missionService.js';
 import { eventService } from './eventService.js';
 import { storeNavigationService } from './storeNavigationService.js';
-import { hindsightService } from './hindsightService.js';
+import { memoryService } from './nativeMemoryService.js';
 import { Product, CartItem, ShoppingMission, InventoryItem, SubstitutionRecord } from '../types/index.js';
 
 export interface ToolExecutionResult {
@@ -328,7 +328,7 @@ function ambiguousProductMessage(query: string): string | undefined {
   ));
   const unique = [...new Map(matches.map(product => [product.id, product])).values()];
   if (unique.length < 2) return undefined;
-  return `Several products match "${query}": ${unique.slice(0, 4).map(product => `${product.name} (₹${product.price})`).join(' or ')}. Ask the customer which one they mean.`;
+  return `Several products match "${query}": ${unique.slice(0, 4).map(product => `${product.name} (â‚¹${product.price})`).join(' or ')}. Ask the customer which one they mean.`;
 }
 
 export async function executeCustomerAgentTool(
@@ -377,7 +377,7 @@ export async function executeCustomerAgentTool(
               shelf_location: p.shelf_location,
               in_stock: (db.getInventoryByProductId(p.id)?.quantity || 0) > 0,
               reasonBadge: (p as any).reasonBadge,
-              isPreferred: !!(p as any).reasonBadge?.includes('⭐'),
+              isPreferred: !!(p as any).reasonBadge?.includes('â­'),
               isDeprioritized: !!(p as any).isDeprioritized,
               personalizedScore: (p as any).personalizedScore
             }))
@@ -506,7 +506,7 @@ export async function executeCustomerAgentTool(
         let pastAcceptedSubName = '';
         try {
           if (authenticatedCustomerId) {
-            const memories = await hindsightService.recallCustomerMemories(
+            const memories = await memoryService.recallCustomerMemories(
               authenticatedCustomerId,
               `${target?.name || args.productIdOrName} substitute oats accepted`
             );
@@ -546,7 +546,7 @@ export async function executeCustomerAgentTool(
 
         const topSubstitutes = scoredCandidates.slice(0, 3).map(s => ({
           ...s.product,
-          badge: s.isPreviouslyAccepted ? '🔄 Previously accepted substitute by you' : undefined
+          badge: s.isPreviouslyAccepted ? 'ðŸ”„ Previously accepted substitute by you' : undefined
         }));
 
         // Record substitution event in database ledger
@@ -656,7 +656,7 @@ export async function executeCustomerAgentTool(
 
         // Retain positive preference into Customer Hindsight
         try {
-          if (authenticatedCustomerId) await hindsightService.retainCustomerPreferenceExperience(authenticatedCustomerId, target.name, true, 0.88);
+          if (authenticatedCustomerId) await memoryService.retainCustomerPreferenceExperience(authenticatedCustomerId, target.name, true, 0.88);
         } catch {}
 
         // If adding an item that fulfills a substitution, record acceptance and retain in Hindsight
@@ -665,7 +665,7 @@ export async function executeCustomerAgentTool(
         if (pendingSub) {
           db.recordSubstitutionAccepted(pendingSub.id, sessionId);
           try {
-            if (authenticatedCustomerId) await hindsightService.retainCustomerSubstitutionExperience(
+            if (authenticatedCustomerId) await memoryService.retainCustomerSubstitutionExperience(
               authenticatedCustomerId,
               pendingSub.requested_product_name,
               target.name,
@@ -920,7 +920,7 @@ export async function executeCustomerAgentTool(
           try {
             const customerId = authenticatedCustomerId;
             if (!customerId) throw new Error('A verified customer identity is required to retain this preference outcome.');
-            const retained = await hindsightService.retainCustomerPreferenceExperience(
+            const retained = await memoryService.retainCustomerPreferenceExperience(
               customerId,
               targetName,
               isAccepted,
@@ -986,3 +986,5 @@ export async function executeCustomerAgentTool(
     };
   }
 }
+
+

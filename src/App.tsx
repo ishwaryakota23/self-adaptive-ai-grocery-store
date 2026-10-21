@@ -97,7 +97,7 @@ const GlobalModalsContainer: React.FC<{
         initialRole={getStartedInitialRole}
       />
 
-      {/* Emergency Automated Phone Call Modal between JARVIS and Manager */}
+      {/* Emergency automated phone call simulation between the assistant and manager */}
       <JarvisEmergencyPhoneCallModal />
     </>
   );

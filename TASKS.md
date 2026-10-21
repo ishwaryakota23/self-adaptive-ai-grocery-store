@@ -1,3 +1,13 @@
+# Implementation status update (2026-10-21)
+
+This checklist contains historical project claims below. The external Hindsight integration has been removed and replaced by the native Supabase/PostgreSQL memory engine documented in `NATIVE_MEMORY_ENGINE.md`. Do not interpret the old Hindsight SDK/cloud checklist items as current dependencies or proof of live persistence. The native memory test suite uses a fake PostgREST adapter; production persistence still requires manually applying the migration and verifying against the intended Supabase project. Some pre-existing scripted demo screens and database compatibility field names remain; they are not the native memory store.
+
+The native engine covers Customer, Store, and Security agent context and has isolated fixtures for all 21 scenarios. Alexa/customer voice behavior is unchanged by this memory migration.
+
+---
+
+Historical checklist follows:
+
 Avunu, **`TASKS.md` kuda marchali**. Existing checklist lo old phases unnayi, but mana actual implementation already Customer Agent + Store Agent + Hindsight complete ayipoyayi. So old `[ ]` tasks ala unte repo chusthe incomplete laga kanipisthundi.
 
 **`TASKS.md` entire content replace chesi idi pettu:**

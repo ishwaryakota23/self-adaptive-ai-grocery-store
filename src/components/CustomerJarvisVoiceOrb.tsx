@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic,
@@ -19,7 +19,7 @@ import { customerAgent, getCustomerAgentIdentity } from '../services/customerAge
 import { voiceService } from '../services/voiceService.js';
 import { languageDetector } from '../services/languageDetector.js';
 import { db } from '../services/db.js';
-import { hindsightService } from '../services/hindsightService.js';
+import { memoryService } from '../services/nativeMemoryService.js';
 import { echoGuard } from '../services/echoGuard.js';
 import { Product, ShoppingMission, LanguageCode, CartItem } from '../types/index.js';
 import { useApp } from '../context/AppContext';
@@ -120,9 +120,9 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
     setConversationState('AWAITING_CONTINUATION');
     setShowStatusBubble(true);
     const promptText = language === 'te'
-      ? "మనం కాసేపు మాట్లాడలేదు. కొనసాగించాలా లేదా ముగించాలా?"
+      ? "à°®à°¨à°‚ à°•à°¾à°¸à±‡à°ªà± à°®à°¾à°Ÿà±à°²à°¾à°¡à°²à±‡à°¦à±. à°•à±Šà°¨à°¸à°¾à°—à°¿à°‚à°šà°¾à°²à°¾ à°²à±‡à°¦à°¾ à°®à±à°—à°¿à°‚à°šà°¾à°²à°¾?"
       : language === 'hi'
-      ? "हमने थोड़ी देर से बातचीत नहीं की। क्या आप जारी रखना चाहते हैं या समाप्त करें?"
+      ? "à¤¹à¤®à¤¨à¥‡ à¤¥à¥‹à¤¡à¤¼à¥€ à¤¦à¥‡à¤° à¤¸à¥‡ à¤¬à¤¾à¤¤à¤šà¥€à¤¤ à¤¨à¤¹à¥€à¤‚ à¤•à¥€à¥¤ à¤•à¥à¤¯à¤¾ à¤†à¤ª à¤œà¤¾à¤°à¥€ à¤°à¤–à¤¨à¤¾ à¤šà¤¾à¤¹à¤¤à¥‡ à¤¹à¥ˆà¤‚ à¤¯à¤¾ à¤¸à¤®à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚?"
       : "We haven't continued our conversation for a while. Would you like to continue, or should I end the conversation?";
     setLastSpokenText(promptText);
 
@@ -144,10 +144,10 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
     promptTimeoutRef.current = setTimeout(() => {
       if (conversationStateRef.current === 'AWAITING_CONTINUATION') {
         const timeoutEndMsg = language === 'te'
-          ? "నిష్క్రియత కారణంగా సెషన్ ముగిసింది. మీకు కావలసినప్పుడు 'హే జార్విస్' అని చెప్పండి."
+          ? "à°¨à°¿à°·à±à°•à±à°°à°¿à°¯à°¤ à°•à°¾à°°à°£à°‚à°—à°¾ à°¸à±†à°·à°¨à± à°®à±à°—à°¿à°¸à°¿à°‚à°¦à°¿. à°®à±€à°•à± à°•à°¾à°µà°²à°¸à°¿à°¨à°ªà±à°ªà±à°¡à± 'à°¹à±‡ à°…à°²à±†à°•à±à°¸à°¾' à°…à°¨à°¿ à°šà±†à°ªà±à°ªà°‚à°¡à°¿."
           : language === 'hi'
-          ? "निष्क्रियता के कारण सत्र समाप्त हुआ। जब भी ज़रूरत हो 'हे जार्विस' कहें।"
-          : "Ending conversation session due to inactivity. Say 'Hey JARVIS' whenever you need me.";
+          ? "à¤¨à¤¿à¤·à¥à¤•à¥à¤°à¤¿à¤¯à¤¤à¤¾ à¤•à¥‡ à¤•à¤¾à¤°à¤£ à¤¸à¤¤à¥à¤° à¤¸à¤®à¤¾à¤ªà¥à¤¤ à¤¹à¥à¤†à¥¤ à¤œà¤¬ à¤­à¥€ à¤œà¤¼à¤°à¥‚à¤°à¤¤ à¤¹à¥‹ 'à¤¹à¥‡ à¤à¤²à¥‡à¤•à¥à¤¸à¤¾' à¤•à¤¹à¥‡à¤‚à¥¤"
+          : "Ending conversation session due to inactivity. Say 'Hey Alexa' whenever you need me.";
         endCustomerConversation(timeoutEndMsg);
       }
     }, 35000);
@@ -158,9 +158,9 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
     setConversationState('CONVERSATION_ACTIVE');
     setShowStatusBubble(true);
     const confirmMsg = language === 'te'
-      ? "సంభాషణ కొనసాగుతోంది. నేను మీకు ఇంకా ఏమి సహాయపడగలను?"
+      ? "à°¸à°‚à°­à°¾à°·à°£ à°•à±Šà°¨à°¸à°¾à°—à±à°¤à±‹à°‚à°¦à°¿. à°¨à±‡à°¨à± à°®à±€à°•à± à°‡à°‚à°•à°¾ à°à°®à°¿ à°¸à°¹à°¾à°¯à°ªà°¡à°—à°²à°¨à±?"
       : language === 'hi'
-      ? "बातचीत जारी है। मैं आपको और क्या ढूँढने में मदद कर सकता हूँ?"
+      ? "à¤¬à¤¾à¤¤à¤šà¥€à¤¤ à¤œà¤¾à¤°à¥€ à¤¹à¥ˆà¥¤ à¤®à¥ˆà¤‚ à¤†à¤ªà¤•à¥‹ à¤”à¤° à¤•à¥à¤¯à¤¾ à¤¢à¥‚à¤à¤¢à¤¨à¥‡ à¤®à¥‡à¤‚ à¤®à¤¦à¤¦ à¤•à¤° à¤¸à¤•à¤¤à¤¾ à¤¹à¥‚à¤?"
       : "Continuing our conversation. What else can I help you find?";
     setLastSpokenText(confirmMsg);
     resetInactivityTimer();
@@ -171,10 +171,10 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
     if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
     if (promptTimeoutRef.current) clearTimeout(promptTimeoutRef.current);
     const defaultEnd = language === 'te'
-      ? "సంభాషణ ముగిసింది. మీకు అవసరమైనప్పుడు 'హే జార్విస్' అని చెప్పండి."
+      ? "à°¸à°‚à°­à°¾à°·à°£ à°®à±à°—à°¿à°¸à°¿à°‚à°¦à°¿. à°®à±€à°•à± à°…à°µà°¸à°°à°®à±ˆà°¨à°ªà±à°ªà±à°¡à± 'à°¹à±‡ à°…à°²à±†à°•à±à°¸à°¾' à°…à°¨à°¿ à°šà±†à°ªà±à°ªà°‚à°¡à°¿."
       : language === 'hi'
-      ? "बातचीत समाप्त हुई। जब भी आपको ज़रूरत हो 'हे जार्विस' कहें।"
-      : "Ending conversation. Say 'Hey JARVIS' whenever you need me.";
+      ? "à¤¬à¤¾à¤¤à¤šà¥€à¤¤ à¤¸à¤®à¤¾à¤ªà¥à¤¤ à¤¹à¥à¤ˆà¥¤ à¤œà¤¬ à¤­à¥€ à¤†à¤ªà¤•à¥‹ à¤œà¤¼à¤°à¥‚à¤°à¤¤ à¤¹à¥‹ 'à¤¹à¥‡ à¤à¤²à¥‡à¤•à¥à¤¸à¤¾' à¤•à¤¹à¥‡à¤‚à¥¤"
+      : "Ending conversation. Say 'Hey Alexa' whenever you need me.";
     const finalMsg = msg || defaultEnd;
     setConversationState('WAKE_WORD_MONITORING');
     setLastSpokenText(finalMsg);
@@ -247,25 +247,25 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
 
         const lower = rawTranscript.toLowerCase();
         const hasWakeWord =
-          lower.includes('hey jarvis') ||
-          lower.includes('jarvis') ||
-          lower.includes('హే జార్విస్') ||
-          lower.includes('జార్విస్') ||
-          lower.includes('हे जार्विस') ||
-          lower.includes('जार्विस');
+          lower.includes('hey alexa') ||
+          lower.includes('alexa') ||
+          lower.includes('à°¹à±‡ à°…à°²à±†à°•à±à°¸à°¾') ||
+          lower.includes('à°…à°²à±†à°•à±à°¸à°¾') ||
+          lower.includes('à¤¹à¥‡ à¤à¤²à¥‡à¤•à¥à¤¸à¤¾') ||
+          lower.includes('à¤à¤²à¥‡à¤•à¥à¤¸à¤¾');
 
         if (latest.isFinal) {
           const cleanCommand = rawTranscript
-            .replace(/hey\s+jarvis[,.]?/i, '')
-            .replace(/jarvis[,.]?/i, '')
-            .replace(/హే\s+జార్విస్[,.]?/i, '')
-            .replace(/జార్విస్[,.]?/i, '')
-            .replace(/हे\s+जार्विस[,.]?/i, '')
-            .replace(/जार्विस[,.]?/i, '')
+            .replace(/hey\s+alexa[,.]?/i, '')
+            .replace(/alexa[,.]?/i, '')
+            .replace(/à°¹à±‡\s+à°…à°²à±†à°•à±à°¸à°¾[,.]?/i, '')
+            .replace(/à°…à°²à±†à°•à±à°¸à°¾[,.]?/i, '')
+            .replace(/à¤¹à¥‡\s+à¤à¤²à¥‡à¤•à¥à¤¸à¤¾[,.]?/i, '')
+            .replace(/à¤à¤²à¥‡à¤•à¥à¤¸à¤¾[,.]?/i, '')
             .trim();
 
           // ===================================================================
-          // STATE 1: WAKE_WORD_MONITORING (Passive listening for "Hey JARVIS")
+          // STATE 1: WAKE_WORD_MONITORING (Passive listening for "Hey Alexa")
           // ===================================================================
           if (conversationStateRef.current === 'WAKE_WORD_MONITORING') {
             if (hasWakeWord) {
@@ -273,19 +273,19 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
               setShowStatusBubble(true);
 
               if (cleanCommand) {
-                // One-breath initiation + query: e.g. "Hey JARVIS, where is olive oil?"
+                // One-breath initiation + query: e.g. "Hey Alexa, where is olive oil?"
                 setLiveTranscript(cleanCommand);
                 resetInactivityTimer();
                 handleProcessVoiceCommand(cleanCommand);
               } else {
-                // Standalone "Hey JARVIS" -> Start conversation session!
+                // Standalone "Hey Alexa" -> Start conversation session!
                 setLiveTranscript('Starting conversation...');
                 voiceService.playAudioChime(580);
                 resetInactivityTimer();
                 const greeting = language === 'te'
-                  ? "చెప్పండి, నేను మీకు ఎలా సహాయపడగలను?"
+                  ? "à°šà±†à°ªà±à°ªà°‚à°¡à°¿, à°¨à±‡à°¨à± à°®à±€à°•à± à°Žà°²à°¾ à°¸à°¹à°¾à°¯à°ªà°¡à°—à°²à°¨à±?"
                   : language === 'hi'
-                  ? "हाँ, मैं आपकी क्या मदद कर सकता हूँ?"
+                  ? "à¤¹à¤¾à¤, à¤®à¥ˆà¤‚ à¤†à¤ªà¤•à¥€ à¤•à¥à¤¯à¤¾ à¤®à¤¦à¤¦ à¤•à¤° à¤¸à¤•à¤¤à¤¾ à¤¹à¥‚à¤?"
                   : "Yes, how can I help?";
                 setLastSpokenText(greeting);
                 speakResponse(greeting, language);
@@ -341,13 +341,13 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
               lower.includes('close conversation') ||
               lower.includes('goodbye') ||
               lower.includes("that's all") ||
-              lower.includes('bye jarvis') ||
-              lower.includes('చాలు') ||
-              lower.includes('ఆపు') ||
-              lower.includes('ముగించు') ||
-              lower.includes('बस') ||
-              lower.includes('अलविदा') ||
-              lower.includes('बंद करो')
+              lower.includes('bye alexa') ||
+              lower.includes('à°šà°¾à°²à±') ||
+              lower.includes('à°†à°ªà±') ||
+              lower.includes('à°®à±à°—à°¿à°‚à°šà±') ||
+              lower.includes('à¤¬à¤¸') ||
+              lower.includes('à¤…à¤²à¤µà¤¿à¤¦à¤¾') ||
+              lower.includes('à¤¬à¤‚à¤¦ à¤•à¤°à¥‹')
             ) {
               endCustomerConversation();
             } else {
@@ -369,10 +369,10 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
 
       recognition.onerror = (event: any) => {
         if (event.error === 'not-allowed') {
-          console.warn('[Customer JARVIS] Microphone permission denied');
+          console.warn('[Customer Alexa+] Microphone permission denied');
           setErrorNotice('Microphone permission blocked. You can type in the chat below.');
         } else if (event.error !== 'no-speech') {
-          console.warn('[Customer JARVIS] Speech recognition error:', event.error);
+          console.warn('[Customer Alexa+] Speech recognition error:', event.error);
         }
       };
 
@@ -397,7 +397,7 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
         recognition.start();
       } catch (e) {}
     } catch (err) {
-      console.warn('[Customer JARVIS] Speech recognition init failed:', err);
+      console.warn('[Customer Alexa+] Speech recognition init failed:', err);
     }
 
     return () => {
@@ -567,7 +567,7 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
       const langToSpeak = (response.response_language as LanguageCode) || preferredLang || 'en';
       await speakResponse(response.message, langToSpeak);
     } catch (err) {
-      console.error('[Customer JARVIS] Error invoking Customer Agent:', err);
+      console.error('[Customer Alexa+] Error invoking Customer Agent:', err);
       const fallbackError = "I couldn't complete that request right now. Please try again in a moment.";
       setLastSpokenText(fallbackError);
       onMessageAdded({
@@ -592,7 +592,7 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
     try {
       await voiceService.speak(text, lang, sessionId);
     } catch (e) {
-      console.warn('[Customer JARVIS] TTS playback error:', e);
+      console.warn('[Customer Alexa+] TTS playback error:', e);
     } finally {
       finishVoiceTurn();
     }
@@ -654,7 +654,7 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
               <div className="flex items-center justify-between border-b border-slate-800 pb-1">
                 <span className="font-mono text-[10px] font-bold text-emerald-400 flex items-center gap-1">
                   <BrainCircuit className="w-3 h-3 text-emerald-400" />
-                  JARVIS Voice Companion
+                  GrocerAI Shopping Assistant
                 </span>
                 <div className="flex items-center gap-1.5">
                   {conversationState === 'CONVERSATION_ACTIVE' && (
@@ -701,7 +701,7 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
                   {conversationState === 'CONVERSATION_ACTIVE' && voiceState === 'LISTENING' && (liveTranscript || 'Listening... (Speak follow-up naturally)')}
                   {voiceState === 'PROCESSING' && 'Consulting Customer Agent & Store Telemetry...'}
                   {voiceState === 'SPEAKING' && lastSpokenText}
-                  {conversationState === 'WAKE_WORD_MONITORING' && voiceState === 'IDLE' && 'Say "Hey JARVIS" anytime to ask about products, locations, or cart.'}
+                  {conversationState === 'WAKE_WORD_MONITORING' && voiceState === 'IDLE' && 'Say "Hey Alexa" anytime to ask about products, locations, or cart.'}
                 </p>
               )}
 
@@ -737,18 +737,18 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
                   ? 'bg-slate-900/90 border-slate-700 text-emerald-400 hover:bg-slate-800'
                   : 'bg-rose-950/80 border-rose-500/40 text-rose-300 hover:bg-rose-900'
               }`}
-              title={voiceAudioEnabled ? 'Mute JARVIS voice response' : 'Enable JARVIS voice response'}
+              title={voiceAudioEnabled ? 'Mute Alexa+ voice response' : 'Enable Alexa+ voice response'}
             >
               {voiceAudioEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
             </button>
           )}
 
-          {/* Main JARVIS Orb */}
+          {/* Assistant voice control */}
           <button
             type="button"
             onClick={handleOrbTap}
             className="relative w-12 h-12 rounded-full flex items-center justify-center cursor-pointer shadow-xl focus:outline-none group select-none"
-            title='Say "Hey JARVIS" or tap to talk'
+            title='Say "Hey Alexa" or tap to talk'
           >
             {/* Outer Pulsing Aura (Reacts to voice state) */}
             <motion.div
@@ -802,7 +802,7 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
 
             {/* Micro Wake Word Tag */}
             <span className="absolute -top-1 -left-2 bg-slate-950 text-emerald-400 border border-emerald-500/40 text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-full uppercase pointer-events-none shadow-sm">
-              JARVIS
+              ALEXA+
             </span>
           </button>
         </div>
@@ -823,3 +823,6 @@ export const CustomerJarvisVoiceOrb: React.FC<CustomerJarvisVoiceOrbProps> = ({
     </>
   );
 };
+
+
+

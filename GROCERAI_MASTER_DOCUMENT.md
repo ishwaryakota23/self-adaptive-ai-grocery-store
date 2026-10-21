@@ -1,8 +1,10 @@
-﻿# Hackathon Checkout Notice
+# Hackathon Checkout Notice
 
-GrocerAI is a hackathon prototype. Checkout uses a scannable demo QR and a Done action after product verification. No money is transferred, and demo completion does not create a paid order, sale, or inventory movement. Hindsight learning is the core innovation.
+GrocerAI is a hackathon prototype. Checkout uses a scannable demo QR and a Done action after product verification. No money is transferred, and demo completion does not create a paid order, sale, or inventory movement. The current persistent memory implementation is native Supabase/PostgreSQL; see `NATIVE_MEMORY_ENGINE.md` for setup and verification status.
 
 # GROCERAI: COMPLETE SYSTEM ARCHITECTURE, INTELLIGENCE & CAPABILITIES MASTER DOCUMENT
+
+> **Implementation accuracy:** This document preserves the original hackathon design narrative. Its seeded customer examples, store quantities, risk percentages, and “Hindsight” labels are scripted demonstrations, not verified live learning or production measurements. The external Hindsight service has been removed. Current native memory behavior, scope, setup, and test limits are documented in `NATIVE_MEMORY_ENGINE.md`.
 
 > **Version:** 2.0 â€¢ **Release Status:** Hackathon Prototype (simulated checkout only; not a commercial payment system)  
 > **Core Identity:** Self-Adaptive Autonomous Retail Operating System for Packaged Supermarkets  
@@ -23,13 +25,13 @@ Traditional "Just Walk Out" retail systems (e.g., Amazon Go) require millions of
 1. **100% Fixed-Size Packaged Grocery Supermarket:** Every product in the store is an established, pre-packaged, fixed-price SKU (e.g., Atta 1 kg, Milk 500 ml, Cheese 200 g, Oil 1 L). There are no variable-weight produce scales or customer-entered weights.
 2. **Unified Continuous Shopping Session:** Shoppers can start on a physical terminal, hand off to mobile via a single-use session pass, shop throughout the store, and complete verification at any available kiosk.
 3. **Deterministic CV + Barcode Verification:** The kiosk matches physical barcodes against the digital cart before unlocking payment, capturing real-world edge cases like pack-size mismatches, multi-quantities, and unreadable labels.
-4. **Three Specialized Autonomous Agents + JARVIS:** A tripartite agent ecosystem (Customer Agent, Store Agent, Security Agent) coordinated by an executive JARVIS supervisory interface.
+4. **Three Specialized Autonomous Agents + Alexa+:** A tripartite agent ecosystem (Customer Agent, Store Agent, Security Agent) coordinated by an executive Alexa+ supervisory interface.
 5. **Real Closed-Loop Hindsight:** Past operational, customer, and security experiences directly alter future decisions and quantify verified economic ROI.
 
 ```
 â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
 â”‚                           STORE MANAGER SUPERVISORY LAYER                   â”‚
-â”‚                                 JARVIS VOICE PRESENCE                       â”‚
+â”‚                                 Alexa+ VOICE PRESENCE                       â”‚
 â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
                                        â”‚
      â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
@@ -82,16 +84,16 @@ GrocerAI maintains three logically isolated, specialized autonomous agents. Each
 
 ---
 
-## 3. JARVIS â€” EXECUTIVE MANAGER COMMAND CENTER
+## 3. Alexa+ â€” EXECUTIVE MANAGER COMMAND CENTER
 
-### Architectural Rule: JARVIS Is NOT a Fourth Agent
-JARVIS does not duplicate the underlying intelligence of the Customer, Store, or Security agents. JARVIS sits above them as a **Manager-Facing Voice Communication and Supervisory Control Presence**.
+### Architectural Rule: Alexa+ Is NOT a Fourth Agent
+Alexa+ does not duplicate the underlying intelligence of the Customer, Store, or Security agents. Alexa+ sits above them as a **Manager-Facing Voice Communication and Supervisory Control Presence**.
 
 ```
                 Store Manager (Voice Speech)
                              â”‚
                              â–¼
-              JARVIS Executive Voice Presence
+              Alexa+ Executive Voice Presence
               (Holographic Reactor Orb UI)
                              â”‚
       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
@@ -106,10 +108,10 @@ Customer Telemetry     Store Telemetry        Security Telemetry
            (Restock 42 Units, Open Kiosks 3 & 4)
 ```
 
-### Key Technical Implementations in Manager JARVIS
+### Key Technical Implementations in Manager Alexa+
 1. **Voice-First Holographic Orb UI:** Replaced traditional chatbot messenger bubbles with a dynamic SVG holographic reactor orb featuring pulsing halos, gyroscopic segmented arcs, and plasma core animations reflecting `IDLE`, `LISTENING`, `PROCESSING`, and `SPEAKING` states.
-2. **Wake Once, Continuous Conversation:** The manager speaks `"Hey JARVIS"` once to initiate the session. Subsequent turns are natural and continuous without repeating the wake phrase.
-3. **Intelligent EchoGuard:** Employs hardware-level speech synthesis tracking and silence detection to ensure JARVIS never captures its own voice output as incoming manager commands, eliminating infinite feedback loops.
+2. **Wake Once, Continuous Conversation:** The manager says `"Hey Alexa"` once to initiate the session. Subsequent turns are natural and continuous without repeating the wake phrase.
+3. **Intelligent EchoGuard:** Employs hardware-level speech synthesis tracking and silence detection to ensure Alexa+ never captures its own voice output as incoming manager commands, eliminating infinite feedback loops.
 4. **Natural Spoken Briefings:** Provides crisp, executive-grade answers to queries like:
    * *"What needs my attention right now?"*
    * *"What about security?"*
@@ -269,8 +271,8 @@ For live hackathon and staging demonstrations, GrocerAI supports deployment acro
                      MANAGER LAPTOP / TABLET                  â”‚
                   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”               â”‚
                   â”‚ Manager Dashboard         â”‚               â”‚
-                  â”‚ Spoken Command to JARVIS: â”‚               â”‚
-                  â”‚ "Hey JARVIS, Kiosk 2 is   â”‚               â”‚
+                  â”‚ Spoken Command to Alexa+: â”‚               â”‚
+                  â”‚ "Hey Alexa+, Kiosk 2 is   â”‚               â”‚
                   â”‚ congested. Open Kiosk 3." â”‚               â”‚
                   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜               â”‚
                                 â”‚                             â”‚
@@ -281,7 +283,7 @@ For live hackathon and staging demonstrations, GrocerAI supports deployment acro
                                                               â–¼
                                                  Computer 3 Detects Command
                                                  Zero clicks, zero refresh
-                                                 Holographic JARVIS Orb Speaks:
+                                                 Holographic Alexa+ Orb Speaks:
                                                  "Kiosk 3 is active.
                                                   You can use it."
                                                               â”‚
@@ -295,7 +297,7 @@ For live hackathon and staging demonstrations, GrocerAI supports deployment acro
   * **Primary:** Supabase Realtime Broadcast channel (`kiosk_events`) for sub-millisecond reaction.
   * **Fail-Safe Fallback:** HTTP polling loop (`GET /api/kiosks`) running every 1,000 ms, ensuring 100% reliability even on firewall-restricted Wi-Fi.
 * **Persistent Identity Resolution:** Each terminal identifies its role via URL parameters (`?kiosk_id=KIOSK_03`) and maintains it across browser reloads via session storage.
-* **Clean Demo Reset:** Saying *"Hey JARVIS, reset Kiosk 3"* instantly returns Computer 3 to its minimal Standby screen without code modifications.
+* **Clean Demo Reset:** Saying *"Hey Alexa+, reset Kiosk 3"* instantly returns Computer 3 to its minimal Standby screen without code modifications.
 
 ---
 
@@ -318,7 +320,7 @@ When presenting GrocerAI to judges, investors, or store operators, these eight f
 
 | Domain | Implemented Features & Architecture |
 | :--- | :--- |
-| **Agent Core** | Customer Agent, Store Agent, Security Agent, JARVIS Supervisory Voice Presence. |
+| **Agent Core** | Customer Agent, Store Agent, Security Agent, Alexa+ Supervisory Voice Presence. |
 | **Hindsight Engine** | Customer preference learning, negative preference suppression, substitution memory, Store 4-week restocking policy convergence (30 $\rightarrow$ 38 $\rightarrow$ 44 $\rightarrow$ 42 units), Security false-positive context suppression (0.72 $\rightarrow$ 0.18). |
 | **ROI Engine** | True Expected Benefit vs Realized Net Impact mathematical modeling; net store profit ledger. |
 | **Kiosk Architecture** | Multi-screen touch terminal, Welcome page, returning customer scanning, new customer OTP registration, mobile handoff, verification station. |
@@ -326,7 +328,7 @@ When presenting GrocerAI to judges, investors, or store operators, these eight f
 | **Hardware Separation** | 4 cryptographic QR domains (Identity, Session, Employee, Payment). |
 | **Security & CCTV** | Non-accusatory incident language, CCTVSurveillanceHub, multi-camera manifest, employee resolution panel (Benign Correction, False Positive, Confirmed Incident). |
 | **Remote Terminals** | Deployed multi-computer Kiosk 3 remote activation over local Wi-Fi or cloud via `/api/kiosks` and Supabase Realtime Broadcast. |
-| **Manager JARVIS** | Continuous multi-turn dialogue, EchoGuard audio loop prevention, circular holographic reactor orb, hands-free spoken authorization. |
+| **Manager Alexa+** | Continuous multi-turn dialogue, EchoGuard audio loop prevention, circular holographic reactor orb, hands-free spoken authorization. |
 | **Integrations** | Simulated demo checkout QR, Resend email delivery, WhatsApp notification drawer, Supabase database authority. |
 | **Quality & Build** | Clean TypeScript build with zero compilation errors (`tsc && vite build` passing). |
 

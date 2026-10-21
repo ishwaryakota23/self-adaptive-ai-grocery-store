@@ -207,7 +207,7 @@ export const CCTVSurveillanceHub: React.FC<CCTVSurveillanceHubProps> = ({
             <div className="w-3.5 h-3.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
             <div>
               <div className="font-mono text-[10px] text-cyan-400 font-black uppercase tracking-wider flex items-center gap-2">
-                <span>🎯 JARVIS Contextual Camera & Evidence Focus</span>
+                <span>🎯 AI Contextual Camera & Evidence Focus</span>
                 <span className="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/40">Active Stream</span>
               </div>
               <div className="text-white font-bold text-sm mt-0.5">

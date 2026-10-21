@@ -1,4 +1,6 @@
-# GrocerAI — Hindsight Experiential Memory & Learning System Report
+﻿> **Historical archive — superseded.** This report describes the removed Hindsight integration and contains claims that are not current. Current architecture, setup, and verification are documented in `NATIVE_MEMORY_ENGINE.md` and `GROCERAI_TECHNICAL_VIVA.md`. The archived API, cloud, and SDK references remain only to preserve project history.
+
+# GrocerAI â€” Hindsight Experiential Memory & Learning System Report
 
 ## 1. Executive Summary & Architecture Overview
 
@@ -74,7 +76,7 @@ To ensure strict privacy and operational boundaries, GrocerAI enforces dedicated
 
 ## 4. Closed-Loop Learning Curve in Store Operations
 
-The core requirement of experiential learning is demonstrating that past outcomes directly reshape future decisions. This closed-loop cycle is verified in **Suite 3 (Tests 10–13)**:
+The core requirement of experiential learning is demonstrating that past outcomes directly reshape future decisions. This closed-loop cycle is verified in **Suite 3 (Tests 10â€“13)**:
 
 ```mermaid
 sequenceDiagram
@@ -153,7 +155,7 @@ The Groq free/on-demand tier enforces an 8,000 Tokens Per Minute (TPM) quota. To
 If the Hindsight server is ever stopped or unreachable:
 - All methods return `{ success: false, results: [] }` without throwing unhandled exceptions.
 - The UI gracefully indicates `OFFLINE (Fallback Active)` with an alert badge.
-- Verified in **Suite 7 (Tests 24–26)**: Zero crashes when targeting an offline port (`http://localhost:9999`).
+- Verified in **Suite 7 (Tests 24â€“26)**: Zero crashes when targeting an offline port (`http://localhost:9999`).
 
 ---
 
@@ -167,3 +169,4 @@ If the Hindsight server is ever stopped or unreachable:
 | **Phase 2 Baseline** | `src/tests/verify_phase2.ts` | **45** | **45 / 45 PASSED** | Session isolation, payment lifecycle, event ledger, demand funnel hierarchy, manager authorization |
 | **Production Build** | `npm run build` | **1** | **PASS (0 Errors)** | TypeScript strict validation, Vite production bundle generated |
 | **Total Passed** | **All Verification Suites** | **160** | **160 / 160 PASSED** | **100% End-to-End System Integrity** |
+
